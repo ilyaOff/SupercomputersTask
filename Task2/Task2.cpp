@@ -17,7 +17,7 @@ const Point P0 = Point(0.0, 0.0);
 const Point P1 = Point(3.0, 3.0);
 
 const double DELTA = 0.000001;
-const double epsilon = 0.001;
+const double epsilon = 0.01;
 const int KMAX = 100000000;
 
 int N = 0;
@@ -355,5 +355,4 @@ void SaveResults(double **w, int N, int M, ofstream &fileoutput)
 		}
 		fileoutput << ";" << endl;
 	}
-
 }
