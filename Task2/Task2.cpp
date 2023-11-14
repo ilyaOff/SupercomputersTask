@@ -16,13 +16,13 @@ const Point D = Point(0.0, 3.0);
 const Point P0 = Point(0.0, 0.0);
 const Point P1 = Point(3.0, 3.0);
 
-const int PERIOD = 10000;
 const double DELTA = 0.000001;
 const double epsilon = 0.001;
 const int KMAX = 100000000;
 
 int N = 0;
 int M = 0;
+int TracingPeriod = 10000;
 
 #include<fstream>
 using namespace std;
@@ -136,7 +136,7 @@ int main(int argc, char **argv)
 			}
 		}
 		
-		if (k % PERIOD == 0)
+		if (k % TracingPeriod == 0)
 		{
 		#ifdef SHOWINFO
 
@@ -164,7 +164,7 @@ int main(int argc, char **argv)
 		if (deltaSqr2 <= deltaSqr1 && deltaSqr1 <= deltaSqr || deltaSqr2 == deltaSqr)
 			--stopEquals;
 		else
-			stopEquals = 2 * PERIOD;
+			stopEquals = 2 * TracingPeriod;
 
 		if (stopEquals <= 0)
 		{
@@ -225,6 +225,10 @@ void ReadParameters(int argc, char **argv)
 			else if (c == 'M')
 			{
 				iss >> c >> M;
+			}
+			else if (c == 'P')
+			{
+				iss >> c >> TracingPeriod;
 			}
 		}
 	}
