@@ -21,16 +21,21 @@ const double DELTA = 0.000001;
 const double epsilon = 0.001;
 const int KMAX = 100000000;
 
-int N = 40;
-int M = 40;
+int N = 0;
+int M = 0;
 
 #include<fstream>
 using namespace std;
 
 int main(int argc, char **argv)
 {
-	//ReadParameters(argc, argv);
-	//return 0;
+	ReadParameters(argc, argv);
+	if (M <= 0 || N <= 0)
+	{
+		cout << "invalid parametres (M, N)";
+		return -1;
+	}
+
 
 	double h1 = (P1.X - P0.X) / (M);
 	double h2 = (P1.Y - P0.Y) / (N);
@@ -65,7 +70,7 @@ int main(int argc, char **argv)
 			double y = P0.Y + j * h2;
 			a[i][j] = CalculateA(x, y, h1, h2);
 			b[i][j] = CalculateB(x, y, h1, h2);
-			F[i][j] = 0.0;
+			F[i][j] = CalculateF(x, y, h1, h2);
 		}
 	}
 
@@ -76,19 +81,24 @@ int main(int argc, char **argv)
 	int k = 1, stopEquals = 2 * PERIOD;
 	int M1 = M;
 	int N1 = N;
-	ofstream fout("f/F.txt");
-	for (int i = 0; i < M1 + 1; ++i)
 	{
-		for (int j = 0; j < N1 + 1; ++j)
-		{
-			double x = P0.X + i * h1;
-			double y = P0.Y + j * h2;
-			F[i][j] = CalculateF(x, y, h1, h2);
-			fout << F[i][j] << " ";
-		}
-		fout << endl;
+		std::ostringstream oss;
+		oss << "f/F.txt";
+		string fileName = oss.str();
+		SaveResults(F, sizeX, sizeY, fileName.c_str());
 	}
-	fout.close();
+	{
+		std::ostringstream oss;
+		oss << "f/A.txt";
+		string fileName = oss.str();
+		SaveResults(a, sizeX, sizeY, fileName.c_str());
+	}
+	{
+		std::ostringstream oss;
+		oss << "f/B.txt";
+		string fileName = oss.str();
+		SaveResults(b, sizeX, sizeY, fileName.c_str());
+	}
 	for (; k < KMAX; ++k)
 	{
 		//посчитать невязку r
@@ -164,18 +174,22 @@ int main(int argc, char **argv)
 			stopEquals = 2 * PERIOD;
 
 		if (stopEquals <= 0)
+		{
+			cout << "equals break" << endl;
 			break;
+		}
 
 		double **swap = w;
 		w = wNew;
 		wNew = swap;
 	}
 	cout << "stop k = " << k << endl;
-	std::ostringstream oss;
-	oss << "f/final.txt";
-	string fileName = oss.str();
-	SaveResults(w, sizeX, sizeY, fileName.c_str());
-
+	{
+		std::ostringstream oss;
+		oss << "f/final.txt";
+		string fileName = oss.str();
+		SaveResults(w, sizeX, sizeY, fileName.c_str());
+	}
 	for (int i = 0; i < sizeX; ++i)
 	{
 		delete[] w[i];
@@ -206,7 +220,19 @@ void ReadParameters(int argc, char **argv)
 		// иначе выводим все аргументы, которые переданы
 		for (int i = 1; i < argc; i++)
 		{
-			cout << "argv[" << i << "] - " << argv[i] << endl;
+			/*cout << "argv[" << i << "] - " << argv[i] << endl;*/
+			char c;
+			std::istringstream iss(argv[i]);
+			
+			iss >> c;
+			if (c == 'N')
+			{
+				iss >> c >> N;
+			}
+			else if (c == 'M')
+			{
+				iss >> c >> M;
+			}
 		}
 	}
 }
@@ -217,16 +243,16 @@ double CalculateA(double x, double y, double h1, double h2)
 		return 0;
 	if (y <= P0.Y)
 		return 0;
-	/*if (x >= P1.X)
+	if (x > P1.X)
 		return 0;
-	if (y >= P1.Y)
-		return 0;*/
+	if (y > P1.Y)
+		return 0;
 
 	x = x - h1 / 2;
 
 	if (x <= C.X)
 	{
-		return 1 / h2;
+		return 1.0;
 	}
 
 	double yCD = 9 - 3 * (x - h1 / 2);
@@ -243,14 +269,14 @@ double CalculateB(double x, double y, double h1, double h2)
 		return 0;
 	if (y <= P0.Y)
 		return 0;
-	/*if (x >= P1.X)
+	if (x > P1.X)
 		return 0;
-	if (y >= P1.Y)
-		return 0;*/
+	if (y > P1.Y)
+		return 0;
 
 	if (x + h1 / 2 <= C.X)
 	{
-		return 1 / h1;
+		return 1.0;
 	}
 
 	double xCD = 3 - (y - h2 / 2) / 3;
