@@ -223,7 +223,7 @@ void ReadParameters(int argc, char **argv)
 			/*cout << "argv[" << i << "] - " << argv[i] << endl;*/
 			char c;
 			std::istringstream iss(argv[i]);
-			
+
 			iss >> c;
 			if (c == 'N')
 			{
@@ -239,28 +239,23 @@ void ReadParameters(int argc, char **argv)
 
 double CalculateA(double x, double y, double h1, double h2)
 {
-	if (x <= P0.X)
-		return 0;
-	if (y <= P0.Y)
-		return 0;
-	if (x > P1.X)
-		return 0;
-	if (y > P1.Y)
+	if ((x <= P0.X) || (y <= P0.Y) || (x > P1.X) || (y > P1.Y))
 		return 0;
 
 	x = x - h1 / 2;
-
 	if (x <= C.X)
-	{
 		return 1.0;
-	}
 
-	double yCD = 9 - 3 * (x - h1 / 2);
-	double aEps = y + h2 / 2 - yCD;
-	aEps = aEps > 0 ? aEps / epsilon : 0;
-	double aOne = yCD - (y - h2 / 2);
-	aOne = aOne > 0 ? aOne : 0;
-	return (aEps + aOne) / h2;
+	double yCB = 9 - 3 * x;
+	double aEps = y + h2 / 2 - yCB;
+	if (aEps < 0)//под CB
+		return 1.0;
+
+	double aOne = yCB - (y - h2 / 2);
+	if (aOne < 0)//над CB
+		return 1.0 / epsilon;
+
+	return (aEps / epsilon + aOne) / h2;
 }
 
 double CalculateB(double x, double y, double h1, double h2)
@@ -315,7 +310,7 @@ double CalculateF(double x, double y, double h1, double h2)
 
 	double xCDLeft = 3 - (yTop) / 3;
 	if (xCDLeft >= xRight)
-		return 1 / (h1 * h2);	
+		return 1 / (h1 * h2);
 
 	double xCDRight = 3 - (yDown) / 3;//Всегда <= B.X и >= C.X
 	if (xCDRight <= xLeft)
