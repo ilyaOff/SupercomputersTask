@@ -108,9 +108,7 @@ int main(int argc, char **argv)
 		{
 			for (int j = 1; j < N1; ++j)
 			{
-				double tmp = MainFunction(w, i, j, M, N, a, b, h1, h2);
-				tmp -= F[i][j];
-				r[i][j] = tmp;
+				r[i][j] = MainFunction(w, i, j, M, N, a, b, h1, h2) - F[i][j];
 			}
 		}
 		//посчитать невязку
