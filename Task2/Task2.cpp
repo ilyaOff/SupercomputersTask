@@ -135,16 +135,13 @@ int main(int argc, char **argv)
 				deltaResult += step * step;
 			}
 		}
-
-		/*if (deltaResult < 0)
-			deltaResult = -deltaResult;*/
-
+		
 		if (k % PERIOD == 0)
 		{
 		#ifdef SHOWINFO
 
 			cout << k << ")";
-			cout << " delta = " << deltaResult;
+			cout << " delta^2 = " << deltaResult;
 			cout << " delta1 = " << deltaResult1;
 			cout << " delta2 = " << deltaResult2;
 			cout << " tau = " << tau;
