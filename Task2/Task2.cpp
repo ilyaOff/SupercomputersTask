@@ -41,8 +41,8 @@ int main(int argc, char **argv)
 	double h1 = (P1.X - P0.X) / (M);
 	double h2 = (P1.Y - P0.Y) / (N);
 
-	double sizeX = M + 1;
-	double sizeY = N + 1;
+	int sizeX = M + 1;
+	int sizeY = N + 1;
 	double **w = new double *[sizeX];
 	double **wNew = new double *[sizeX];
 	double **r = new double *[sizeX];
