@@ -74,6 +74,7 @@ int main(int argc, char **argv)
 			F[i][j] = CalculateF(x, y, h1, h2);
 		}
 	}
+	w[sizeX / 2][sizeY / 2] = 1;
 
 	double tau = 0.0;
 	double rA = 0.0;
