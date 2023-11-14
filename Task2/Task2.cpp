@@ -111,7 +111,7 @@ int main(int argc, char **argv)
 				r[i][j] = MainFunction(w, i, j, M, N, a, b, h1, h2) - F[i][j];
 			}
 		}
-		//посчитать невязку
+		//посчитать итерационный параметр
 		for (int i = 1; i < M1; ++i)
 		{
 			for (int j = 1; j < N1; ++j)
