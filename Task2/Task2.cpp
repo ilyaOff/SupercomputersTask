@@ -354,7 +354,7 @@ void SaveResults(double **w, int N, int M, const char *fileName)
 	ofstream fout(fileName);
 	for (int j = 0; j < N; ++j)
 	{
-		for (int j = 0; j < N; ++j)
+		for (int i = 0; i < M; ++i)
 		{
 			fout << w[i][j] << " ";
 		}
