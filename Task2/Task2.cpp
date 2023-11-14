@@ -260,26 +260,22 @@ double CalculateA(double x, double y, double h1, double h2)
 
 double CalculateB(double x, double y, double h1, double h2)
 {
-	if (x <= P0.X)
-		return 0;
-	if (y <= P0.Y)
-		return 0;
-	if (x > P1.X)
-		return 0;
-	if (y > P1.Y)
+	if ((x <= P0.X) || (y <= P0.Y) || (x > P1.X) || (y > P1.Y))
 		return 0;
 
 	if (x + h1 / 2 <= C.X)
-	{
 		return 1.0;
-	}
 
-	double xCD = 3 - (y - h2 / 2) / 3;
-	double bEps = x + h1 / 2 - xCD;
-	bEps = bEps > 0 ? bEps / epsilon : 0;
-	double bOne = xCD - (x - h1 / 2);
-	bOne = bOne > 0 ? bOne : 0;
-	return (bOne + bEps) / h1;
+	double xCB = 3 - (y - h2 / 2) / 3;
+	double bEps = x + h1 / 2 - xCB;
+	if (bEps < 0)//левее CB
+		return 1.0;
+
+	double bOne = xCB - (x - h1 / 2);
+	if (bOne < 0)//правее CB
+		return 1.0 / epsilon;
+
+	return (bOne + bEps / epsilon) / h1;
 }
 
 double CalculateF(double x, double y, double h1, double h2)
