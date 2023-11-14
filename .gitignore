@@ -429,3 +429,4 @@ FodyWeavers.xsd
 
 # JetBrains Rider
 *.sln.iml
+Task2/f/*
