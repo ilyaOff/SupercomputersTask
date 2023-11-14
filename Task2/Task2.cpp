@@ -129,14 +129,10 @@ int main(int argc, char **argv)
 		{
 			for (int j = 1; j < N1; ++j)
 			{
-				double tmp = tau * r[i][j];
-				wNew[i][j] = w[i][j] - tmp;
+				double step = tau * r[i][j];
+				wNew[i][j] = w[i][j] - step;
 
-				if (tmp < 0)
-					tmp = -tmp;
-
-				if (deltaResult < tmp)
-					deltaResult = tmp;
+				deltaResult += step * step;
 			}
 		}
 
@@ -164,7 +160,7 @@ int main(int argc, char **argv)
 		#endif
 		}
 
-		if (deltaResult < DELTA)
+		if (deltaResult < DELTA * DELTA)
 			break;
 		deltaResult2 = deltaResult1;
 		deltaResult1 = deltaResult;
