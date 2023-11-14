@@ -84,22 +84,19 @@ int main(int argc, char **argv)
 	int M1 = M;
 	int N1 = N;
 	{
-		std::ostringstream oss;
-		oss << "f/F.txt";
-		string fileName = oss.str();
-		SaveResults(F, sizeX, sizeY, fileName.c_str());
+		ofstream fout("f/F.txt");
+		SaveResults(F, sizeX, sizeY, fout);
+		fout.close();
 	}
 	{
-		std::ostringstream oss;
-		oss << "f/A.txt";
-		string fileName = oss.str();
-		SaveResults(a, sizeX, sizeY, fileName.c_str());
+		ofstream fout("f/A.txt");
+		SaveResults(a, sizeX, sizeY, fout);
+		fout.close();
 	}
 	{
-		std::ostringstream oss;
-		oss << "f/B.txt";
-		string fileName = oss.str();
-		SaveResults(b, sizeX, sizeY, fileName.c_str());
+		ofstream fout("f/B.txt");
+		SaveResults(b, sizeX, sizeY, fout);
+		fout.close();
 	}
 	for (; k < KMAX; ++k)
 	{
@@ -135,7 +132,7 @@ int main(int argc, char **argv)
 				deltaSqr += step * step;
 			}
 		}
-		
+
 		if (k % TracingPeriod == 0)
 		{
 		#ifdef SHOWINFO
@@ -152,8 +149,9 @@ int main(int argc, char **argv)
 		#ifdef WRITEFILE
 			std::ostringstream oss;
 			oss << "f/result" << k << ".txt";
-			string fileName = oss.str();
-			SaveResults(w, N, M, fileName.c_str());
+			ofstream fout(oss.str());
+			SaveResults(w, N, M, fout);
+			fout.close();
 		#endif
 		}
 
@@ -176,13 +174,15 @@ int main(int argc, char **argv)
 		w = wNew;
 		wNew = swap;
 	}
+
 	cout << "stop k = " << k << endl;
 	{
-		std::ostringstream oss;
-		oss << "f/final.txt";
-		string fileName = oss.str();
-		SaveResults(w, sizeX, sizeY, fileName.c_str());
+		ofstream fout("f/final.txt");
+		SaveResults(w, sizeX, sizeY, fout);
+		fout.close();
 	}
+
+	//Освобождение памяти
 	for (int i = 0; i < sizeX; ++i)
 	{
 		delete[] w[i];
@@ -345,17 +345,15 @@ double MainFunction(double **w, int i, int j, int M, int N, double **a, double *
 	return -(dx + dy);
 }
 
-void SaveResults(double **w, int N, int M, const char *fileName)
+void SaveResults(double **w, int N, int M, ofstream &fileoutput)
 {
-	ofstream fout(fileName);
 	for (int j = 0; j < N; ++j)
 	{
 		for (int i = 0; i < M; ++i)
 		{
-			fout << w[i][j] << " ";
+			fileoutput << w[i][j] << " ";
 		}
-		fout << ";" << endl;
+		fileoutput << ";" << endl;
 	}
 
-	fout.close();
 }
