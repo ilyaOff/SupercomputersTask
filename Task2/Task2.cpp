@@ -35,6 +35,7 @@ int main(int argc, char **argv)
 		cout << "invalid parametres (M, N)";
 		return -1;
 	}
+	cout << "M = " << M << " N = " << N << endl;
 
 
 	double h1 = (P1.X - P0.X) / (M);
@@ -280,47 +281,42 @@ double CalculateB(double x, double y, double h1, double h2)
 
 double CalculateF(double x, double y, double h1, double h2)
 {
-	if (x <= P0.X)
-		return 0;
-	if (y <= P0.Y)
-		return 0;
-	if (x >= P1.X)
-		return 0;
-	if (y >= P1.Y)
+	if ((x <= P0.X) || (y <= P0.Y) || (x >= P1.X) || (y >= P1.Y))
 		return 0;
 
 	double xLeft = x - h1 / 2;
 	double xRight = x + h1 / 2;
-	if (xRight <= C.X)
-		return 1 / (h1 * h2);
+	if (xRight <= C.X)//правее CB
+		return 1.0;
 
 	double yTop = y + h2 / 2;
 	if (yTop > C.Y)//не должно произойти, так как вызываем от правильных точек
 		yTop = C.Y;
-	double yCDTop = yTop;
 
 	double yDown = y - h2 / 2;
 	if (yDown < B.Y)//не должно произойти, так как вызываем от правильных точек
 		yDown = B.Y;
-	double yCDDown = yDown;
+
+	double yCBTop = yTop;
+	double yCBDown = yDown;
 
 	double xCDLeft = 3 - (yTop) / 3;
-	if (xCDLeft >= xRight)
-		return 1 / (h1 * h2);
+	if (xCDLeft >= xRight)//левее CB
+		return 1.0;
 
-	double xCDRight = 3 - (yDown) / 3;//Всегда <= B.X и >= C.X
-	if (xCDRight <= xLeft)
+	double xCDRight = 3 - (yDown) / 3;
+	if (xCDRight <= xLeft)//правее CB
 		return 0;
 
-	if (xCDLeft < xLeft)
+	if (xCDLeft < xLeft)//Пересечение с левой гранью
 	{
 		xCDLeft = xLeft;
-		yCDTop = 9 - 3 * xCDLeft;
+		yCBTop = 9 - 3 * xCDLeft;
 	}
-	if (xCDRight > xRight)
+	if (xCDRight > xRight)//Пересечение с правой гранью
 	{
 		xCDRight = xRight;
-		yCDDown = 9 - 3 * xCDRight;
+		yCBDown = 9 - 3 * xCDRight;
 	}
 
 	double dx1 = xCDLeft - xLeft;
@@ -328,11 +324,10 @@ double CalculateF(double x, double y, double h1, double h2)
 		dx1 = 0;
 	double dx2 = xCDRight - xCDLeft;
 
-	double dy1 = yCDTop - yCDDown;
-	double dy2 = yCDDown - yDown;
+	double dy1 = yCBTop - yCBDown;
+	double dy2 = yCBDown - yDown;
 
 	double s1 = dy1 * (dx1 + dx2 / 2) + dy2 * (dx1 + dx2);
-	double s2 = h1 * h2 - s1;
 
 	return (s1) / (h1 * h2);
 }
@@ -357,7 +352,7 @@ double MainFunction(double **w, int i, int j, int M, int N, double **a, double *
 void SaveResults(double **w, int N, int M, const char *fileName)
 {
 	ofstream fout(fileName);
-	for (int i = 0; i < M; ++i)
+	for (int j = 0; j < N; ++j)
 	{
 		for (int j = 0; j < N; ++j)
 		{
