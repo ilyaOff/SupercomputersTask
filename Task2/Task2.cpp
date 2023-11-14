@@ -79,8 +79,8 @@ int main(int argc, char **argv)
 	double tau = 0.0;
 	double rA = 0.0;
 	double tauNumerator = 0.0, tauDenominator = 0.0;
-	double deltaResult2 = 0.0, deltaResult1 = 0.0, deltaResult = 0.0;
-	int k = 1, stopEquals = 2 * PERIOD;
+	double deltaSqr2 = 0.0, deltaSqr1 = 0.0, deltaSqr = 0.0;
+	int k = 1, stopEquals = 2 * TracingPeriod;
 	int M1 = M;
 	int N1 = N;
 	{
@@ -122,7 +122,7 @@ int main(int argc, char **argv)
 			}
 		}
 		tau = tauNumerator / tauDenominator;
-		deltaResult = 0.0;
+		deltaSqr = 0.0;
 		//посчитать w(k+1)
 		//посчитать точность
 		for (int i = 1; i < M1; ++i)
@@ -132,7 +132,7 @@ int main(int argc, char **argv)
 				double step = tau * r[i][j];
 				wNew[i][j] = w[i][j] - step;
 
-				deltaResult += step * step;
+				deltaSqr += step * step;
 			}
 		}
 		
@@ -141,9 +141,9 @@ int main(int argc, char **argv)
 		#ifdef SHOWINFO
 
 			cout << k << ")";
-			cout << " delta^2 = " << deltaResult;
-			cout << " delta1 = " << deltaResult1;
-			cout << " delta2 = " << deltaResult2;
+			cout << " delta^2 = " << deltaSqr;
+			cout << " delta^2(k-1) = " << deltaSqr1;
+			cout << " delta^2(k-2) = " << deltaSqr2;
 			cout << " tau = " << tau;
 			cout << " tauNumerator = " << tauNumerator;
 			cout << " tauDenominator = " << tauDenominator << endl;
@@ -157,11 +157,11 @@ int main(int argc, char **argv)
 		#endif
 		}
 
-		if (deltaResult < DELTA * DELTA)
+		if (deltaSqr < DELTA * DELTA)
 			break;
-		deltaResult2 = deltaResult1;
-		deltaResult1 = deltaResult;
-		if (deltaResult2 <= deltaResult1 && deltaResult1 <= deltaResult || deltaResult2 == deltaResult)
+		deltaSqr2 = deltaSqr1;
+		deltaSqr1 = deltaSqr;
+		if (deltaSqr2 <= deltaSqr1 && deltaSqr1 <= deltaSqr || deltaSqr2 == deltaSqr)
 			--stopEquals;
 		else
 			stopEquals = 2 * PERIOD;
