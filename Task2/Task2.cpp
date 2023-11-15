@@ -29,16 +29,13 @@ int TracingPeriod = 10000;
 
 int main(int argc, char **argv)
 {
-	cout << "Thread " << omp_get_thread_num() << endl;
-	//return 0;
-
 	ofstream log("f/Log.txt");
 	if (argc == 1)
 		log << "no arguments!" << endl;
 	else
 		ReadParameters(argc, argv);
 
-	log << "M = " << M << " N = " << N << endl;
+	log << "M = " << M << " N = " << N << " Period = " << TracingPeriod << endl;
 	if (M <= 0 || N <= 0)
 	{
 		log << "invalid parametres (M, N)";
