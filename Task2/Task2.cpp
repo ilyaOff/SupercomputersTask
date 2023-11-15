@@ -1,6 +1,7 @@
 ﻿#include <iostream>
 #include <string> 
 #include <sstream>
+#include<fstream>
 #include "Point.h"
 #include "Task2.h"
 //#define WRITEFILE
@@ -24,8 +25,6 @@ int N = 0;
 int M = 0;
 int TracingPeriod = 10000;
 
-#include<fstream>
-using namespace std;
 
 int main(int argc, char **argv)
 {
