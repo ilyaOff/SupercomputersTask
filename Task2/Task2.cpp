@@ -191,6 +191,7 @@ int main(int argc, char **argv)
 
 	log << "stop k = " << k << endl;
 	log << "time = " << (omp_get_wtime() - start);
+	cout << "time = " << (omp_get_wtime() - start);
 	{
 		ofstream fout("f/final.txt");
 		SaveResults(w, sizeX, sizeY, fout);
