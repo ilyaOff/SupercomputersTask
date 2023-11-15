@@ -106,7 +106,7 @@ int main(int argc, char **argv)
 		fout.close();
 	}
 
-	#pragma omp parallel shared(tauNumerator, tauDenominator, tau, w, a, b, F) private(i, j, rA)
+	#pragma omp parallel shared(tauNumerator, tauDenominator, tau, w, a, b, F) private(i, j,  rA)
 	for (; k < KMAX; ++k)
 	{
 		//посчитать невязку r
