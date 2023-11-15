@@ -2,6 +2,7 @@
 #include <string> 
 #include <sstream>
 #include<fstream>
+#include <omp.h>
 #include "Point.h"
 #include "Task2.h"
 //#define WRITEFILE
@@ -28,6 +29,9 @@ int TracingPeriod = 10000;
 
 int main(int argc, char **argv)
 {
+	cout << "Thread " << omp_get_thread_num() << endl;
+	//return 0;
+
 	ofstream log("f/Log.txt");
 	if (argc == 1)
 		log << "no arguments!" << endl;
@@ -41,13 +45,14 @@ int main(int argc, char **argv)
 		return -1;
 	}
 
+	double start = omp_get_wtime();
+
 	double h1 = (P1.X - P0.X) / (M);
 	double h2 = (P1.Y - P0.Y) / (N);
 
 	int sizeX = M + 1;
 	int sizeY = N + 1;
 	double **w = new double *[sizeX];
-	double **wNew = new double *[sizeX];
 	double **r = new double *[sizeX];
 	double **a = new double *[sizeX];
 	double **b = new double *[sizeX];
@@ -56,19 +61,20 @@ int main(int argc, char **argv)
 	for (int i = 0; i < sizeX; ++i)
 	{
 		w[i] = new double[sizeY];
-		wNew[i] = new double[sizeY];
 		r[i] = new double[sizeY];
 		a[i] = new double[sizeY];
 		b[i] = new double[sizeY];
 		F[i] = new double[sizeY];
 	}
-
+	//Установка параметров OpenMP
+	omp_set_nested(1);
+	#pragma omp parallel for
 	for (int i = 0; i < sizeX; ++i)
 	{
+		#pragma omp parallel for
 		for (int j = 0; j < sizeY; ++j)
 		{
 			w[i][j] = 0;
-			wNew[i][j] = 0;
 			r[i][j] = 0;
 			double x = P0.X + i * h1;
 			double y = P0.Y + j * h2;
@@ -103,16 +109,21 @@ int main(int argc, char **argv)
 	for (; k < KMAX; ++k)
 	{
 		//посчитать невязку r
+		//#pragma omp parallel for
 		for (int i = 1; i < M; ++i)
 		{
+			//#pragma omp parallel for
 			for (int j = 1; j < N; ++j)
 			{
 				r[i][j] = MainFunction(w, i, j, M, N, a, b, h1, h2) - F[i][j];
 			}
 		}
+		tauNumerator = 0.0, tauDenominator = 0.0;
 		//посчитать итерационный параметр
+		//#pragma omp parallel for reduction(+:tauNumerator, tauDenominator)
 		for (int i = 1; i < M; ++i)
 		{
+			//#pragma omp parallel for reduction(+:tauNumerator, tauDenominator)
 			for (int j = 1; j < N; ++j)
 			{
 				rA = MainFunction(r, i, j, M, N, a, b, h1, h2);
@@ -124,20 +135,24 @@ int main(int argc, char **argv)
 		deltaSqr = 0.0;
 		//посчитать w(k+1)
 		//посчитать точность
+		//#pragma omp parallel for reduction(+:deltaSqr)
 		for (int i = 1; i < M; ++i)
 		{
+			//#pragma omp parallel for reduction(+:deltaSqr)
 			for (int j = 1; j < N; ++j)
 			{
 				double step = tau * r[i][j];
-				wNew[i][j] = w[i][j] - step;
+				w[i][j] -= step;
 
 				deltaSqr += step * step;
 			}
 		}
 
+
 		if (k % TracingPeriod == 0)
 		{
-		#ifdef SHOWINFO
+			#ifdef SHOWINFO
+			cout << k << endl;
 			log << k << ")";
 			log << " delta^2 = " << deltaSqr;
 			log << " delta^2(k-1) = " << deltaSqr1;
@@ -146,15 +161,15 @@ int main(int argc, char **argv)
 			/*log << " tauNumerator = " << tauNumerator;
 			log << " tauDenominator = " << tauDenominator;*/
 			log << endl;
-		#endif // SHOWINFO
+			#endif // SHOWINFO
 
-		#ifdef WRITEFILE
+			#ifdef WRITEFILE
 			std::ostringstream oss;
 			oss << "f/result" << k << ".txt";
 			ofstream fout(oss.str());
 			SaveResults(w, N, M, fout);
 			fout.close();
-		#endif
+			#endif
 		}
 
 		if (deltaSqr < DELTA * DELTA)
@@ -171,13 +186,10 @@ int main(int argc, char **argv)
 			log << "equals break" << endl;
 			break;
 		}
-
-		double **swap = w;
-		w = wNew;
-		wNew = swap;
 	}
 
 	log << "stop k = " << k << endl;
+	log << "time = " << (omp_get_wtime() - start);
 	{
 		ofstream fout("f/final.txt");
 		SaveResults(w, sizeX, sizeY, fout);
@@ -188,14 +200,12 @@ int main(int argc, char **argv)
 	for (int i = 0; i < sizeX; ++i)
 	{
 		delete[] w[i];
-		delete[] wNew[i];
 		delete[] r[i];
 		delete[] a[i];
 		delete[] b[i];
 		delete[] F[i];
 	}
 	delete[] w;
-	delete[] wNew;
 	delete[] r;
 	delete[] a;
 	delete[] b;
