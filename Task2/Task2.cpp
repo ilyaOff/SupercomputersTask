@@ -47,7 +47,6 @@ int main(int argc, char **argv)
 	int sizeX = M + 1;
 	int sizeY = N + 1;
 	double **w = new double *[sizeX];
-	double **wNew = new double *[sizeX];
 	double **r = new double *[sizeX];
 	double **a = new double *[sizeX];
 	double **b = new double *[sizeX];
@@ -56,7 +55,6 @@ int main(int argc, char **argv)
 	for (int i = 0; i < sizeX; ++i)
 	{
 		w[i] = new double[sizeY];
-		wNew[i] = new double[sizeY];
 		r[i] = new double[sizeY];
 		a[i] = new double[sizeY];
 		b[i] = new double[sizeY];
@@ -68,7 +66,6 @@ int main(int argc, char **argv)
 		for (int j = 0; j < sizeY; ++j)
 		{
 			w[i][j] = 0;
-			wNew[i][j] = 0;
 			r[i][j] = 0;
 			double x = P0.X + i * h1;
 			double y = P0.Y + j * h2;
@@ -129,7 +126,7 @@ int main(int argc, char **argv)
 			for (int j = 1; j < N; ++j)
 			{
 				double step = tau * r[i][j];
-				wNew[i][j] = w[i][j] - step;
+				w[i][j] -= step;
 
 				deltaSqr += step * step;
 			}
@@ -171,10 +168,6 @@ int main(int argc, char **argv)
 			log << "equals break" << endl;
 			break;
 		}
-
-		double **swap = w;
-		w = wNew;
-		wNew = swap;
 	}
 
 	log << "stop k = " << k << endl;
@@ -188,14 +181,12 @@ int main(int argc, char **argv)
 	for (int i = 0; i < sizeX; ++i)
 	{
 		delete[] w[i];
-		delete[] wNew[i];
 		delete[] r[i];
 		delete[] a[i];
 		delete[] b[i];
 		delete[] F[i];
 	}
 	delete[] w;
-	delete[] wNew;
 	delete[] r;
 	delete[] a;
 	delete[] b;
