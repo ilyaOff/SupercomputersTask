@@ -90,6 +90,7 @@ int main(int argc, char **argv)
 	double tauNumerator = 0.0, tauDenominator = 0.0;
 	double deltaSqr2 = 0.0, deltaSqr1 = 0.0, deltaSqr = 0.0;
 	int k = 1, stopEquals = 2 * TracingPeriod;
+	//Вывод коэффициентов рассчёта
 	{
 		ofstream fout("f/F.txt");
 		SaveResults(F, sizeX, sizeY, fout);
