@@ -84,8 +84,6 @@ int main(int argc, char **argv)
 	double tauNumerator = 0.0, tauDenominator = 0.0;
 	double deltaSqr2 = 0.0, deltaSqr1 = 0.0, deltaSqr = 0.0;
 	int k = 1, stopEquals = 2 * TracingPeriod;
-	int M1 = M;
-	int N1 = N;
 	{
 		ofstream fout("f/F.txt");
 		SaveResults(F, sizeX, sizeY, fout);
@@ -101,20 +99,21 @@ int main(int argc, char **argv)
 		SaveResults(b, sizeX, sizeY, fout);
 		fout.close();
 	}
+
 	for (; k < KMAX; ++k)
 	{
 		//посчитать невязку r
-		for (int i = 1; i < M1; ++i)
+		for (int i = 1; i < M; ++i)
 		{
-			for (int j = 1; j < N1; ++j)
+			for (int j = 1; j < N; ++j)
 			{
 				r[i][j] = MainFunction(w, i, j, M, N, a, b, h1, h2) - F[i][j];
 			}
 		}
 		//посчитать итерационный параметр
-		for (int i = 1; i < M1; ++i)
+		for (int i = 1; i < M; ++i)
 		{
-			for (int j = 1; j < N1; ++j)
+			for (int j = 1; j < N; ++j)
 			{
 				rA = MainFunction(r, i, j, M, N, a, b, h1, h2);
 				tauNumerator += rA * r[i][j];
@@ -125,9 +124,9 @@ int main(int argc, char **argv)
 		deltaSqr = 0.0;
 		//посчитать w(k+1)
 		//посчитать точность
-		for (int i = 1; i < M1; ++i)
+		for (int i = 1; i < M; ++i)
 		{
-			for (int j = 1; j < N1; ++j)
+			for (int j = 1; j < N; ++j)
 			{
 				double step = tau * r[i][j];
 				wNew[i][j] = w[i][j] - step;
