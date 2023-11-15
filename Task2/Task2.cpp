@@ -107,24 +107,27 @@ int main(int argc, char **argv)
 		fout.close();
 	}
 
+	#pragma omp parallel shared(tauNumerator, tauDenominator, tau)
 	for (; k < KMAX; ++k)
 	{
 		//посчитать невязку r
-		//#pragma omp parallel for
+		#pragma omp  for  collapse(2)  schedule(static) 
 		for (int i = 1; i < M; ++i)
 		{
-			//#pragma omp parallel for
 			for (int j = 1; j < N; ++j)
 			{
-				r[i][j] = MainFunction(w, i, j, M, N, a, b, h1, h2) - F[i][j];
+				r[i][j] = MainFunction(w, i, j, M, N, a, b, h1, h2) - F[i][j];//зависает распараллеливание, так как нарушаю локальность
 			}
 		}
-		tauNumerator = 0.0, tauDenominator = 0.0;
+		//#pragma omp single
+		{
+			tauNumerator = 0.0, tauDenominator = 0.0;
+		}
+		
 		//посчитать итерационный параметр
-		//#pragma omp parallel for reduction(+:tauNumerator, tauDenominator)
+		#pragma omp for collapse(2) schedule(static) reduction(+:tauNumerator, tauDenominator)
 		for (int i = 1; i < M; ++i)
 		{
-			//#pragma omp parallel for reduction(+:tauNumerator, tauDenominator)
 			for (int j = 1; j < N; ++j)
 			{
 				rA = MainFunction(r, i, j, M, N, a, b, h1, h2);
@@ -132,24 +135,35 @@ int main(int argc, char **argv)
 				tauDenominator += rA * rA;
 			}
 		}
-		tau = tauNumerator / tauDenominator;
-		deltaSqr = 0.0;
+		#pragma omp single
+		{
+			tau = tauNumerator / tauDenominator;
+			deltaSqr = 0.0;
+		}
 		//посчитать w(k+1)
 		//посчитать точность
-		//#pragma omp parallel for reduction(+:deltaSqr)
+		#pragma omp for schedule(static) collapse(2) nowait
 		for (int i = 1; i < M; ++i)
 		{
-			//#pragma omp parallel for reduction(+:deltaSqr)
+			for (int j = 1; j < N; ++j)
+			{
+				w[i][j] = w[i][j] - tau * r[i][j];
+			}
+		}
+
+		#pragma omp for schedule(static) nowait reduction(+:deltaSqr)  
+		for (int i = 1; i < M; ++i)
+		{
 			for (int j = 1; j < N; ++j)
 			{
 				double step = tau * r[i][j];
-				w[i][j] -= step;
 
 				deltaSqr += step * step;
 			}
 		}
 
-
+		#pragma omp barrier
+		#pragma omp single
 		if (k % TracingPeriod == 0)
 		{
 			#ifdef SHOWINFO
@@ -172,7 +186,6 @@ int main(int argc, char **argv)
 			fout.close();
 			#endif
 		}
-
 		if (deltaSqr < DELTA * DELTA)
 			break;
 		deltaSqr2 = deltaSqr1;
