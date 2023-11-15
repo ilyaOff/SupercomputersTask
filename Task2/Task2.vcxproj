@@ -152,6 +152,7 @@
     <ClCompile Include="Task2.cpp" />
   </ItemGroup>
   <ItemGroup>
+    <ClInclude Include="MyMacroses.h" />
     <ClInclude Include="Point.h" />
     <ClInclude Include="Task2.h" />
   </ItemGroup>

@@ -5,6 +5,7 @@
 #include <omp.h>
 #include "Point.h"
 #include "Task2.h"
+#include "MyMacroses.h"
 //#define WRITEFILE
 #define SHOWINFO
 
@@ -105,17 +106,25 @@ int main(int argc, char **argv)
 		fout.close();
 	}
 
-	bool stop = false;
-	#pragma omp parallel shared(tauNumerator, tauDenominator, tau, w, a, b, F, stop) private(i, j)
+	#pragma omp parallel shared(tauNumerator, tauDenominator, tau, w, a, b, F) private(i, j, rA)
 	for (; k < KMAX; ++k)
 	{
 		//посчитать невязку r
-		#pragma omp  for  collapse(2) schedule(static)  nowait
+		#pragma omp  for  collapse(2) schedule(static) 
 		for (i = 1; i < M; ++i)
 		{
 			for (j = 1; j < N; ++j)
 			{
-				r[i][j] = MainFunction(w, i, j, M, N, a, b, h1, h2) - F[i][j];//зависает распараллеливание, так как нарушаю локальность
+				//r[i][j] = -F[i][j] + MainFunction(w, i, j, M, N, a, b, h1, h2);
+				r[i][j] = -F[i][j]
+					+ MainFunctionParallel(LEFT(w, i, j, M, N), a[i][j], h1) 
+					+ MainFunctionParallel(RIGHT(w, i, j, M, N), a[i + 1][j], h1)
+					+ MainFunctionParallel(TOP(w, i, j, M, N), b[i][j + 1], h2)
+					+ MainFunctionParallel(BOTTOM(w, i, j, M, N), b[i][j], h2)		
+					- MainFunctionParallel(CENTR(w, i, j, M, N), a[i + 1][j], h1)
+					- MainFunctionParallel(CENTR(w, i, j, M, N), a[i][j], h1)
+					- MainFunctionParallel(CENTR(w, i, j, M, N), b[i][j + 1] , h2)
+					- MainFunctionParallel(CENTR(w, i, j, M, N), b[i][j], h2);
 			}
 		}
 		#pragma omp single
@@ -130,6 +139,14 @@ int main(int argc, char **argv)
 		{
 			for (j = 1; j < N; ++j)
 			{
+				/*rA = MainFunctionParallel(LEFT(w, i, j, M, N), a[i][j], h1)
+					+ MainFunctionParallel(RIGHT(w, i, j, M, N), a[i + 1][j], h1)
+					+ MainFunctionParallel(TOP(w, i, j, M, N), b[i][j + 1], h2)
+					+ MainFunctionParallel(BOTTOM(w, i, j, M, N), b[i][j], h2)
+					- MainFunctionParallel(CENTR(w, i, j, M, N), a[i + 1][j], h1)
+					- MainFunctionParallel(CENTR(w, i, j, M, N), a[i][j], h1)
+					- MainFunctionParallel(CENTR(w, i, j, M, N), b[i][j + 1], h2)
+					- MainFunctionParallel(CENTR(w, i, j, M, N), b[i][j], h2);*/
 				rA = MainFunction(r, i, j, M, N, a, b, h1, h2);
 				tauNumerator += rA * r[i][j];
 				tauDenominator += rA * rA;
@@ -159,7 +176,7 @@ int main(int argc, char **argv)
 
 				deltaSqr += step * step;
 			}
-		}
+	}
 
 		#pragma omp barrier
 
@@ -187,9 +204,7 @@ int main(int argc, char **argv)
 				fout.close();
 				#endif
 			}
-			if (deltaSqr < DELTA * DELTA)
-				stop = true;
-			else
+			/*else
 			{
 				deltaSqr2 = deltaSqr1;
 				deltaSqr1 = deltaSqr;
@@ -203,11 +218,12 @@ int main(int argc, char **argv)
 					log << "equals break" << endl;
 					stop = true;
 				}
-			}
+			}*/
 		}
-		if (stop)
+
+		if (deltaSqr < DELTA * DELTA)
 			break;
-	}
+}
 
 	log << "stop k = " << k << endl;
 	cout << "stop k = " << k << endl;
@@ -370,6 +386,12 @@ double MainFunction(double **w, int i, int j, int M, int N, double **a, double *
 	double dx = (a[i + 1][j] * (right - center) - a[i][j] * (center - left)) / (h1 * h1);
 	double dy = (b[i][j + 1] * (top - center) - b[i][j] * (center - down)) / (h2 * h2);
 	return -(dx + dy);
+}
+
+double MainFunctionParallel(double w, double k, double h)
+{
+	double dx = k * (w) / (h * h);
+	return -dx;
 }
 
 void SaveResults(double **w, int N, int M, ofstream &fileoutput)
