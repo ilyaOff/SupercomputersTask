@@ -2,6 +2,7 @@
 #include <string> 
 #include <sstream>
 #include<fstream>
+#include<omp.h>
 #include "Point.h"
 #include "Task2.h"
 //#define WRITEFILE
@@ -28,6 +29,7 @@ int TracingPeriod = 10000;
 
 int main(int argc, char **argv)
 {
+	double start = omp_get_wtime();
 	ofstream log("f/Log.txt");
 	if (argc == 1)
 		log << "no arguments!" << endl;
@@ -171,7 +173,10 @@ int main(int argc, char **argv)
 		}
 		}
 
+	cout << "stop k = " << k << endl;
 	log << "stop k = " << k << endl;
+	log << "time = " << omp_get_wtime() - start << endl;
+	cout << "time = " << omp_get_wtime() - start << endl;
 	{
 		ofstream fout("f/final.txt");
 		SaveResults(w, sizeX, sizeY, fout);
