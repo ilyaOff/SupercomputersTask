@@ -127,7 +127,7 @@ int main(int argc, char **argv)
 					- MainFunctionParallel(CENTR(w, i, j, M, N), b[i][j], h2);
 			}
 		}
-		#pragma omp single
+		//#pragma omp single
 		{
 			tauNumerator = 0.0, tauDenominator = 0.0;
 			deltaSqr = 0.0;
@@ -139,20 +139,23 @@ int main(int argc, char **argv)
 		{
 			for (j = 1; j < N; ++j)
 			{
-				rA = MainFunctionParallel(LEFT(r, i, j, M, N), a[i][j], h1)
-					+ MainFunctionParallel(RIGHT(r, i, j, M, N), a[i + 1][j], h1)
-					+ MainFunctionParallel(TOP(r, i, j, M, N), b[i][j + 1], h2)
-					+ MainFunctionParallel(BOTTOM(r, i, j, M, N), b[i][j], h2)
-					- MainFunctionParallel(CENTR(r, i, j, M, N), a[i + 1][j], h1)
-					- MainFunctionParallel(CENTR(r, i, j, M, N), a[i][j], h1)
-					- MainFunctionParallel(CENTR(r, i, j, M, N), b[i][j + 1], h2)
-					- MainFunctionParallel(CENTR(r, i, j, M, N), b[i][j], h2);
+				double a1 = a[i][j];
+				double a2 = a[i+1][j];
+				double b1= b[i][j];
+				double b2= b[i][j+1];
+				rA = MainFunctionParallel(LEFT(r, i, j, M, N), a1, h1)
+					+ MainFunctionParallel(RIGHT(r, i, j, M, N), a2, h1)
+					+ MainFunctionParallel(TOP(r, i, j, M, N), b2, h2)
+					+ MainFunctionParallel(BOTTOM(r, i, j, M, N), b1, h2)
+					- MainFunctionParallel(CENTR(r, i, j, M, N), a1 + a2, h1)
+					- MainFunctionParallel(CENTR(r, i, j, M, N), b1+b2, h2);
+
 				//rA = MainFunction(r, i, j, M, N, a, b, h1, h2);
 				tauNumerator += rA * r[i][j];
 				tauDenominator += rA * rA;
 			}
 		}
-		#pragma omp single
+		//#pragma omp single
 		{
 			tau = tauNumerator / tauDenominator;
 		}
@@ -179,6 +182,8 @@ int main(int argc, char **argv)
 		}
 
 		#pragma omp barrier
+
+		
 
 		#pragma omp single
 		{
@@ -221,7 +226,6 @@ int main(int argc, char **argv)
 			}*/
 			++k;
 		}
-
 		if (deltaSqr < DELTA * DELTA)
 			break;
 	}
