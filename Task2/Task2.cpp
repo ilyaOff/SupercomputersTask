@@ -108,6 +108,7 @@ int main(int argc, char **argv)
 			}
 		}
 		//посчитать итерационный параметр
+		tauNumerator = 0.0, tauDenominator = 0.0;
 		for (int i = 1; i < M; ++i)
 		{
 			for (int j = 1; j < N; ++j)
@@ -168,7 +169,7 @@ int main(int argc, char **argv)
 			log << "equals break" << endl;
 			break;
 		}
-	}
+		}
 
 	log << "stop k = " << k << endl;
 	{
@@ -193,7 +194,7 @@ int main(int argc, char **argv)
 	delete[] F;
 
 	return 0;
-}
+	}
 
 void ReadParameters(int argc, char **argv)
 {
