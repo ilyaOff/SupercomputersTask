@@ -135,7 +135,7 @@ int main(int argc, char **argv)
 
 		if (k % TracingPeriod == 0)
 		{
-		#ifdef SHOWINFO
+			#ifdef SHOWINFO
 			log << k << ")";
 			log << " delta^2 = " << deltaSqr;
 			log << " delta^2(k-1) = " << deltaSqr1;
@@ -144,15 +144,15 @@ int main(int argc, char **argv)
 			/*log << " tauNumerator = " << tauNumerator;
 			log << " tauDenominator = " << tauDenominator;*/
 			log << endl;
-		#endif // SHOWINFO
+			#endif // SHOWINFO
 
-		#ifdef WRITEFILE
+			#ifdef WRITEFILE
 			std::ostringstream oss;
 			oss << "f/result" << k << ".txt";
 			ofstream fout(oss.str());
 			SaveResults(w, N, M, fout);
 			fout.close();
-		#endif
+			#endif
 		}
 
 		if (deltaSqr < DELTA * DELTA)
