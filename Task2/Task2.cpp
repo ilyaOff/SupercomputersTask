@@ -120,12 +120,12 @@ int main(int argc, char **argv)
 				double b1 = b[i][j];
 				double b2 = b[i][j + 1];
 				r[i][j] = -F[i][j]
-					+ MainFunctionParallel(LEFT(w, i, j, M, N), a1, h1)
-					+ MainFunctionParallel(RIGHT(w, i, j, M, N), a2, h1)
-					+ MainFunctionParallel(TOP(w, i, j, M, N), b2, h2)
-					+ MainFunctionParallel(BOTTOM(w, i, j, M, N), b1, h2)
-					- MainFunctionParallel(CENTR(w, i, j, M, N), a1 + a2, h1)
-					- MainFunctionParallel(CENTR(w, i, j, M, N), b1 + b2, h2);
+					+ (MainFunctionParallel(LEFT(w, i, j, M, N), a1)
+						  + MainFunctionParallel(RIGHT(w, i, j, M, N), a2)) / (h1 * h1)
+					+ (MainFunctionParallel(TOP(w, i, j, M, N), b2)
+					   + MainFunctionParallel(BOTTOM(w, i, j, M, N), b1)) / (h2 * h2)
+					- MainFunctionParallel(CENTR(w, i, j, M, N), a1 + a2) / (h1 * h1)
+					- MainFunctionParallel(CENTR(w, i, j, M, N), b1 + b2) / (h2 * h2);
 			}
 		}
 		//#pragma omp single
@@ -141,15 +141,15 @@ int main(int argc, char **argv)
 			for (j = 1; j < N; ++j)
 			{
 				double a1 = a[i][j];
-				double a2 = a[i+1][j];
-				double b1= b[i][j];
-				double b2= b[i][j+1];
-				rA = MainFunctionParallel(LEFT(r, i, j, M, N), a1, h1)
-					+ MainFunctionParallel(RIGHT(r, i, j, M, N), a2, h1)
-					+ MainFunctionParallel(TOP(r, i, j, M, N), b2, h2)
-					+ MainFunctionParallel(BOTTOM(r, i, j, M, N), b1, h2)
-					- MainFunctionParallel(CENTR(r, i, j, M, N), a1 + a2, h1)
-					- MainFunctionParallel(CENTR(r, i, j, M, N), b1+b2, h2);
+				double a2 = a[i + 1][j];
+				double b1 = b[i][j];
+				double b2 = b[i][j + 1];
+				rA = (MainFunctionParallel(LEFT(r, i, j, M, N), a1)
+					  + MainFunctionParallel(RIGHT(r, i, j, M, N), a2)) / (h1 * h1)
+					+ (MainFunctionParallel(TOP(r, i, j, M, N), b2)
+					   + MainFunctionParallel(BOTTOM(r, i, j, M, N), b1)) / (h2 * h2)
+					- MainFunctionParallel(CENTR(r, i, j, M, N), a1 + a2) / (h1 * h1)
+					- MainFunctionParallel(CENTR(r, i, j, M, N), b1 + b2) / (h2 * h2);
 
 				tauNumerator += rA * r[i][j];
 				tauDenominator += rA * rA;
@@ -183,7 +183,7 @@ int main(int argc, char **argv)
 
 		#pragma omp barrier
 
-		
+
 
 		#pragma omp single
 		{
@@ -393,11 +393,6 @@ double MainFunction(double **w, int i, int j, int M, int N, double **a, double *
 	return -(dx + dy);
 }
 
-double MainFunctionParallel(double w, double k, double h)
-{
-	double dx = k * (w) / (h * h);
-	return -dx;
-}
 
 void SaveResults(double **w, int N, int M, ofstream &fileoutput)
 {
