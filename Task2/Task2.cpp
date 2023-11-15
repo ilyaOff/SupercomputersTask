@@ -106,8 +106,8 @@ int main(int argc, char **argv)
 		fout.close();
 	}
 
-	#pragma omp parallel shared(tauNumerator, tauDenominator, tau, w, a, b, F) private(i, j,  rA)
-	for (; k < KMAX; ++k)
+	#pragma omp parallel shared(tauNumerator, tauDenominator, tau, w, a, b, F) private(i, j, rA)
+	for (; k < KMAX; )
 	{
 		//посчитать невязку r
 		#pragma omp  for  collapse(2) schedule(static) 
@@ -185,7 +185,7 @@ int main(int argc, char **argv)
 			if (k % TracingPeriod == 0)
 			{
 				#ifdef SHOWINFO
-				cout << k << endl;
+				//cout << k << endl;
 				log << k << ")";
 				log << " delta^2 = " << deltaSqr;
 				log << " delta^2(k-1) = " << deltaSqr1;
@@ -219,6 +219,7 @@ int main(int argc, char **argv)
 					stop = true;
 				}
 			}*/
+			++k;
 		}
 
 		if (deltaSqr < DELTA * DELTA)
