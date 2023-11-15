@@ -87,6 +87,7 @@ int main(int argc, char **argv)
 	double tauNumerator = 0.0, tauDenominator = 0.0;
 	double deltaSqr2 = 0.0, deltaSqr1 = 0.0, deltaSqr = 0.0;
 	int k = 1, stopEquals = 2 * TracingPeriod;
+	int i, j;
 	//Вывод коэффициентов рассчёта
 	{
 		ofstream fout("f/F.txt");
@@ -104,28 +105,30 @@ int main(int argc, char **argv)
 		fout.close();
 	}
 
-	#pragma omp parallel shared(tauNumerator, tauDenominator, tau)
+	bool stop = false;
+	#pragma omp parallel shared(tauNumerator, tauDenominator, tau, w, a, b, F, stop) private(i, j)
 	for (; k < KMAX; ++k)
 	{
 		//посчитать невязку r
-		#pragma omp  for  collapse(2)  schedule(static) 
-		for (int i = 1; i < M; ++i)
+		#pragma omp  for  collapse(2) schedule(static)  nowait
+		for (i = 1; i < M; ++i)
 		{
-			for (int j = 1; j < N; ++j)
+			for (j = 1; j < N; ++j)
 			{
 				r[i][j] = MainFunction(w, i, j, M, N, a, b, h1, h2) - F[i][j];//зависает распараллеливание, так как нарушаю локальность
 			}
 		}
-		//#pragma omp single
+		#pragma omp single
 		{
 			tauNumerator = 0.0, tauDenominator = 0.0;
+			deltaSqr = 0.0;
 		}
-		
+		#pragma omp barrier
 		//посчитать итерационный параметр
 		#pragma omp for collapse(2) schedule(static) reduction(+:tauNumerator, tauDenominator)
-		for (int i = 1; i < M; ++i)
+		for (i = 1; i < M; ++i)
 		{
-			for (int j = 1; j < N; ++j)
+			for (j = 1; j < N; ++j)
 			{
 				rA = MainFunction(r, i, j, M, N, a, b, h1, h2);
 				tauNumerator += rA * r[i][j];
@@ -135,23 +138,22 @@ int main(int argc, char **argv)
 		#pragma omp single
 		{
 			tau = tauNumerator / tauDenominator;
-			deltaSqr = 0.0;
 		}
 		//посчитать w(k+1)
 		//посчитать точность
 		#pragma omp for schedule(static) collapse(2) nowait
-		for (int i = 1; i < M; ++i)
+		for (i = 1; i < M; ++i)
 		{
-			for (int j = 1; j < N; ++j)
+			for (j = 1; j < N; ++j)
 			{
 				w[i][j] = w[i][j] - tau * r[i][j];
 			}
 		}
 
-		#pragma omp for schedule(static) nowait reduction(+:deltaSqr)  
-		for (int i = 1; i < M; ++i)
+		#pragma omp for schedule(static) collapse(2) nowait reduction(+:deltaSqr)  
+		for (i = 1; i < M; ++i)
 		{
-			for (int j = 1; j < N; ++j)
+			for (j = 1; j < N; ++j)
 			{
 				double step = tau * r[i][j];
 
@@ -160,46 +162,55 @@ int main(int argc, char **argv)
 		}
 
 		#pragma omp barrier
+
 		#pragma omp single
-		if (k % TracingPeriod == 0)
 		{
-			#ifdef SHOWINFO
-			cout << k << endl;
-			log << k << ")";
-			log << " delta^2 = " << deltaSqr;
-			log << " delta^2(k-1) = " << deltaSqr1;
-			log << " delta^2(k-2) = " << deltaSqr2;
-			log << " tau = " << tau;
-			/*log << " tauNumerator = " << tauNumerator;
-			log << " tauDenominator = " << tauDenominator;*/
-			log << endl;
-			#endif // SHOWINFO
+			if (k % TracingPeriod == 0)
+			{
+				#ifdef SHOWINFO
+				cout << k << endl;
+				log << k << ")";
+				log << " delta^2 = " << deltaSqr;
+				log << " delta^2(k-1) = " << deltaSqr1;
+				log << " delta^2(k-2) = " << deltaSqr2;
+				log << " tau = " << tau;
+				/*log << " tauNumerator = " << tauNumerator;
+				log << " tauDenominator = " << tauDenominator;*/
+				log << endl;
+				#endif // SHOWINFO
 
-			#ifdef WRITEFILE
-			std::ostringstream oss;
-			oss << "f/result" << k << ".txt";
-			ofstream fout(oss.str());
-			SaveResults(w, N, M, fout);
-			fout.close();
-			#endif
-		}
-		if (deltaSqr < DELTA * DELTA)
-			break;
-		deltaSqr2 = deltaSqr1;
-		deltaSqr1 = deltaSqr;
-		if (deltaSqr2 <= deltaSqr1 && deltaSqr1 <= deltaSqr || deltaSqr2 == deltaSqr)
-			--stopEquals;
-		else
-			stopEquals = 2 * TracingPeriod;
+				#ifdef WRITEFILE
+				std::ostringstream oss;
+				oss << "f/result" << k << ".txt";
+				ofstream fout(oss.str());
+				SaveResults(w, N, M, fout);
+				fout.close();
+				#endif
+			}
+			if (deltaSqr < DELTA * DELTA)
+				stop = true;
+			else
+			{
+				deltaSqr2 = deltaSqr1;
+				deltaSqr1 = deltaSqr;
+				if (deltaSqr2 <= deltaSqr1 && deltaSqr1 <= deltaSqr || deltaSqr2 == deltaSqr)
+					--stopEquals;
+				else
+					stopEquals = 2 * TracingPeriod;
 
-		if (stopEquals <= 0)
-		{
-			log << "equals break" << endl;
-			break;
+				if (stopEquals <= 0)
+				{
+					log << "equals break" << endl;
+					stop = true;
+				}
+			}
 		}
+		if (stop)
+			break;
 	}
 
 	log << "stop k = " << k << endl;
+	cout << "stop k = " << k << endl;
 	log << "time = " << (omp_get_wtime() - start);
 	cout << "time = " << (omp_get_wtime() - start);
 	{
