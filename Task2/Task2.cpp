@@ -28,14 +28,18 @@ int TracingPeriod = 10000;
 
 int main(int argc, char **argv)
 {
-	ReadParameters(argc, argv);
+	ofstream log("f/Log.txt");
+	if (argc == 1)
+		log << "no arguments!" << endl;
+	else
+		ReadParameters(argc, argv);
+
+	log << "M = " << M << " N = " << N << endl;
 	if (M <= 0 || N <= 0)
 	{
-		cout << "invalid parametres (M, N)";
+		log << "invalid parametres (M, N)";
 		return -1;
 	}
-	cout << "M = " << M << " N = " << N << endl;
-
 
 	double h1 = (P1.X - P0.X) / (M);
 	double h2 = (P1.Y - P0.Y) / (N);
@@ -135,14 +139,14 @@ int main(int argc, char **argv)
 		if (k % TracingPeriod == 0)
 		{
 		#ifdef SHOWINFO
-
-			cout << k << ")";
-			cout << " delta^2 = " << deltaSqr;
-			cout << " delta^2(k-1) = " << deltaSqr1;
-			cout << " delta^2(k-2) = " << deltaSqr2;
-			cout << " tau = " << tau;
-			cout << " tauNumerator = " << tauNumerator;
-			cout << " tauDenominator = " << tauDenominator << endl;
+			log << k << ")";
+			log << " delta^2 = " << deltaSqr;
+			log << " delta^2(k-1) = " << deltaSqr1;
+			log << " delta^2(k-2) = " << deltaSqr2;
+			log << " tau = " << tau;
+			/*log << " tauNumerator = " << tauNumerator;
+			log << " tauDenominator = " << tauDenominator;*/
+			log << endl;
 		#endif // SHOWINFO
 
 		#ifdef WRITEFILE
@@ -165,7 +169,7 @@ int main(int argc, char **argv)
 
 		if (stopEquals <= 0)
 		{
-			cout << "equals break" << endl;
+			log << "equals break" << endl;
 			break;
 		}
 
@@ -174,7 +178,7 @@ int main(int argc, char **argv)
 		wNew = swap;
 	}
 
-	cout << "stop k = " << k << endl;
+	log << "stop k = " << k << endl;
 	{
 		ofstream fout("f/final.txt");
 		SaveResults(w, sizeX, sizeY, fout);
@@ -203,34 +207,26 @@ int main(int argc, char **argv)
 
 void ReadParameters(int argc, char **argv)
 {
-	if (argc == 1)
-	{ // если в аргументах только имя программы
-		cout << "no arguments!" << endl; // выводим, что нет аргументов
-	}
-	else
+	for (int i = 1; i < argc; i++)
 	{
-		// иначе выводим все аргументы, которые переданы
-		for (int i = 1; i < argc; i++)
-		{
-			/*cout << "argv[" << i << "] - " << argv[i] << endl;*/
-			char c;
-			std::istringstream iss(argv[i]);
+		char c;
+		std::istringstream iss(argv[i]);
 
-			iss >> c;
-			if (c == 'N')
-			{
-				iss >> c >> N;
-			}
-			else if (c == 'M')
-			{
-				iss >> c >> M;
-			}
-			else if (c == 'P')
-			{
-				iss >> c >> TracingPeriod;
-			}
+		iss >> c;
+		if (c == 'N')
+		{
+			iss >> c >> N;
+		}
+		else if (c == 'M')
+		{
+			iss >> c >> M;
+		}
+		else if (c == 'P')
+		{
+			iss >> c >> TracingPeriod;
 		}
 	}
+
 }
 
 double CalculateA(double x, double y, double h1, double h2)
