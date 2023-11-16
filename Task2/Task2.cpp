@@ -109,7 +109,7 @@ int main(int argc, char **argv)
 		fout.close();
 	}
 
-	for (; k < KMAX; ++k)
+	for (; k < KMAX; /*++k*/)
 	{
 		//посчитать невязку r
 		for (int i = 1; i < M; ++i)
@@ -146,28 +146,28 @@ int main(int argc, char **argv)
 				deltaSqr += step * step;
 			}
 		}
+		#ifdef SHOWINFO
+		if (k % TracingPeriod == 0)
+		{
+			
+			log << k << ")";
+			log << " delta^2 = " << deltaSqr;
+			log << " delta^2(k-1) = " << deltaSqr1;
+			log << " delta^2(k-2) = " << deltaSqr2;
+			log << " tau = " << tau;
+			/*log << " tauNumerator = " << tauNumerator;
+			log << " tauDenominator = " << tauDenominator;*/
+			log << endl;			
 
-		//if (k % TracingPeriod == 0)
-		//{
-		//	#ifdef SHOWINFO
-		//	log << k << ")";
-		//	log << " delta^2 = " << deltaSqr;
-		//	log << " delta^2(k-1) = " << deltaSqr1;
-		//	log << " delta^2(k-2) = " << deltaSqr2;
-		//	log << " tau = " << tau;
-		//	/*log << " tauNumerator = " << tauNumerator;
-		//	log << " tauDenominator = " << tauDenominator;*/
-		//	log << endl;
-		//	#endif // SHOWINFO
-
-		//	#ifdef WRITEFILE
-		//	std::ostringstream oss;
-		//	oss << "f/result" << k << ".txt";
-		//	ofstream fout(oss.str());
-		//	SaveResults(w, N, M, fout);
-		//	fout.close();
-		//	#endif
-		//}
+			#ifdef WRITEFILE
+			std::ostringstream oss;
+			oss << "f/result" << k << ".txt";
+			ofstream fout(oss.str());
+			SaveResults(w, N, M, fout);
+			fout.close();
+			#endif
+		}
+		#endif // SHOWINFO
 
 		if (deltaSqr < DELTA * DELTA)
 			break;
