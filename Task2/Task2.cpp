@@ -7,7 +7,7 @@
 #include "Task2.h"
 #include "MyMacroses.h"
 //#define WRITEFILE
-#define SHOWINFO
+//#define SHOWINFO
 
 using namespace std;
 
@@ -167,12 +167,12 @@ int main(int argc, char **argv)
 		#pragma omp barrier
 
 
-
+		#ifdef SHOWINFO
 		#pragma omp single
 		{
 			if (k % TracingPeriod == 0)
 			{
-				#ifdef SHOWINFO
+			
 				//cout << k << endl;
 				log << k << ")";
 				log << " delta^2 = " << deltaSqr;
@@ -182,7 +182,7 @@ int main(int argc, char **argv)
 				/*log << " tauNumerator = " << tauNumerator;
 				log << " tauDenominator = " << tauDenominator;*/
 				log << endl;
-				#endif // SHOWINFO
+				
 
 				#ifdef WRITEFILE
 				std::ostringstream oss;
@@ -209,6 +209,7 @@ int main(int argc, char **argv)
 			}*/
 			++k;
 		}
+		#endif // SHOWINFO
 		if (deltaSqr < DELTA * DELTA)
 			break;
 	}
