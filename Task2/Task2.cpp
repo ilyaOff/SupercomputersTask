@@ -44,7 +44,6 @@ int main(int argc, char **argv)
 		log << "no arguments!" << endl;
 	else
 		ReadParameters(argc, argv);
-	double start = omp_get_wtime();
 
 	log << "M = " << M << " N = " << N << endl;
 	if (M <= 0 || N <= 0)
@@ -52,6 +51,7 @@ int main(int argc, char **argv)
 		log << "invalid parametres (M, N)";
 		return -1;
 	}
+	double start = omp_get_wtime();
 
 	double h1 = (P1.X - P0.X) / (M);
 	double h2 = (P1.Y - P0.Y) / (N);
@@ -147,27 +147,27 @@ int main(int argc, char **argv)
 			}
 		}
 
-		if (k % TracingPeriod == 0)
-		{
-			#ifdef SHOWINFO
-			log << k << ")";
-			log << " delta^2 = " << deltaSqr;
-			log << " delta^2(k-1) = " << deltaSqr1;
-			log << " delta^2(k-2) = " << deltaSqr2;
-			log << " tau = " << tau;
-			/*log << " tauNumerator = " << tauNumerator;
-			log << " tauDenominator = " << tauDenominator;*/
-			log << endl;
-			#endif // SHOWINFO
+		//if (k % TracingPeriod == 0)
+		//{
+		//	#ifdef SHOWINFO
+		//	log << k << ")";
+		//	log << " delta^2 = " << deltaSqr;
+		//	log << " delta^2(k-1) = " << deltaSqr1;
+		//	log << " delta^2(k-2) = " << deltaSqr2;
+		//	log << " tau = " << tau;
+		//	/*log << " tauNumerator = " << tauNumerator;
+		//	log << " tauDenominator = " << tauDenominator;*/
+		//	log << endl;
+		//	#endif // SHOWINFO
 
-			#ifdef WRITEFILE
-			std::ostringstream oss;
-			oss << "f/result" << k << ".txt";
-			ofstream fout(oss.str());
-			SaveResults(w, N, M, fout);
-			fout.close();
-			#endif
-		}
+		//	#ifdef WRITEFILE
+		//	std::ostringstream oss;
+		//	oss << "f/result" << k << ".txt";
+		//	ofstream fout(oss.str());
+		//	SaveResults(w, N, M, fout);
+		//	fout.close();
+		//	#endif
+		//}
 
 		if (deltaSqr < DELTA * DELTA)
 			break;
