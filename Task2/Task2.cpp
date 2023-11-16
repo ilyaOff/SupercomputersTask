@@ -9,6 +9,16 @@
 #define SHOWINFO
 
 using namespace std;
+#define MainFunction2(res,f, w, i, j, M, N, a, b, h1, h2) {\
+	double center1, left1, right1, top1, down1;\
+	center1 = w[i][j];\
+	left1 = i - 1 == 0 ? 0 : w[i - 1][j];\
+	right1 = i + 1 == M ? 0 : w[i + 1][j];\
+	top1 = j + 1 == N ? 0 : w[i][j + 1];\
+	down1 = j - 1 == 0 ? 0 : w[i][j - 1];\
+	double dx = (a[i + 1][j] * (right1 - center1) - a[i][j] * (center1 - left1)) / (h1 * h1);\
+	double dy = (b[i][j + 1] * (top1 - center1) - b[i][j] * (center1 - down1)) / (h2 * h2);\
+	res = f -(dx + dy);};
 
 //Параметры области
 const Point A = Point(0.0, 0.0);
@@ -29,12 +39,12 @@ int TracingPeriod = 10000;
 
 int main(int argc, char **argv)
 {
-	double start = omp_get_wtime();
 	ofstream log("f/Log.txt");
 	if (argc == 1)
 		log << "no arguments!" << endl;
 	else
 		ReadParameters(argc, argv);
+	double start = omp_get_wtime();
 
 	log << "M = " << M << " N = " << N << endl;
 	if (M <= 0 || N <= 0)
@@ -106,7 +116,8 @@ int main(int argc, char **argv)
 		{
 			for (int j = 1; j < N; ++j)
 			{
-				r[i][j] = MainFunction(w, i, j, M, N, a, b, h1, h2) - F[i][j];
+				MainFunction2(r[i][j], -F[i][j], w, i, j, M, N, a, b, h1, h2);
+				//r[i][j] = MainFunction(w, i, j, M, N, a, b, h1, h2) - F[i][j];
 			}
 		}
 		//посчитать итерационный параметр
@@ -115,7 +126,8 @@ int main(int argc, char **argv)
 		{
 			for (int j = 1; j < N; ++j)
 			{
-				rA = MainFunction(r, i, j, M, N, a, b, h1, h2);
+				MainFunction2(rA, 0, r, i, j, M, N, a, b, h1, h2);
+				//rA = MainFunction(r, i, j, M, N, a, b, h1, h2);
 				tauNumerator += rA * r[i][j];
 				tauDenominator += rA * rA;
 			}
