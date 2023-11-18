@@ -76,7 +76,8 @@ int main(int argc, char **argv)
 	}	
 	
 	//Установка параметров OpenMP
-	omp_set_nested(1);
+	//omp_set_nested(1);
+	//omp_set_dynamic(1);
 
 	cout << "start" << endl;
 	double start = omp_get_wtime();
