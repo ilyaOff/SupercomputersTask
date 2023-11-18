@@ -30,23 +30,33 @@ int TracingPeriod = 10000;
 
 int main(int argc, char **argv)
 {
+	#ifdef  SHOWINFO
 	ofstream log("f/Log.txt");
+	#endif //  SHOWINFO
+
 	if (argc == 1)
+	{
+		#ifdef  SHOWINFO
 		log << "no arguments!" << endl;
+		#endif //  SHOWINFO
+		
+		return -1;
+	}
 	else
 		ReadParameters(argc, argv);
-
+	#ifdef  SHOWINFO
 	log << "M = " << M << " N = " << N << " Period = " << TracingPeriod << endl;
+	#endif //  SHOWINFO
+
 	if (M <= 0 || N <= 0)
 	{
+		#ifdef  SHOWINFO
 		log << "invalid parametres (M, N)";
+		#endif //  SHOWINFO		
 		return -1;
 	}
 
-	double start = omp_get_wtime();
-
-	double h1 = (P1.X - P0.X) / (M);
-	double h2 = (P1.Y - P0.Y) / (N);
+	
 
 	int sizeX = M + 1;
 	int sizeY = N + 1;
@@ -63,9 +73,19 @@ int main(int argc, char **argv)
 		a[i] = new double[sizeY];
 		b[i] = new double[sizeY];
 		F[i] = new double[sizeY];
-	}
+	}	
+	
 	//Установка параметров OpenMP
 	omp_set_nested(1);
+
+	cout << "start" << endl;
+	double start = omp_get_wtime();
+
+	double h1 = (P1.X - P0.X) / (M);
+	double h2 = (P1.Y - P0.Y) / (N);
+
+
+	//#pragma omp parallel for collapse(2)
 	#pragma omp parallel for
 	for (int i = 0; i < sizeX; ++i)
 	{
@@ -90,6 +110,7 @@ int main(int argc, char **argv)
 	int k = 1, stopEquals = 2 * TracingPeriod;
 	int i, j;
 	//Вывод коэффициентов рассчёта
+	#ifdef SHOWINFO
 	{
 		ofstream fout("f/F.txt");
 		SaveResults(F, sizeX, sizeY, fout);
@@ -105,8 +126,9 @@ int main(int argc, char **argv)
 		SaveResults(b, sizeX, sizeY, fout);
 		fout.close();
 	}
+	#endif
 
-	#pragma omp parallel shared(tauNumerator, tauDenominator, tau, w, a, b, F) private(i, j, rA)
+	#pragma omp parallel default(none) shared(tauNumerator, tauDenominator, deltaSqr, w, a, b, F, k) private(i, j, rA, tau)
 	for (; k < KMAX; )
 	{
 		//посчитать невязку r
@@ -118,7 +140,7 @@ int main(int argc, char **argv)
 				MainFunctionParallel2(r[i][j], -F[i][j], w, i, j, M, N, a, b, h1, h2);
 			}
 		}
-		//#pragma omp single
+		#pragma omp single nowait
 		{
 			tauNumerator = 0.0, tauDenominator = 0.0;
 			deltaSqr = 0.0;
@@ -214,10 +236,14 @@ int main(int argc, char **argv)
 			break;
 	}
 
-	log << "stop k = " << k << endl;
 	cout << "stop k = " << k << endl;
-	log << "time = " << (omp_get_wtime() - start);
 	cout << "time = " << (omp_get_wtime() - start);
+	#ifdef  SHOWINFO
+	log << "stop k = " << k << endl;
+	log << "time = " << (omp_get_wtime() - start);
+	#endif //  SHOWINFO	
+
+
 	{
 		ofstream fout("f/final.txt");
 		SaveResults(w, sizeX, sizeY, fout);
