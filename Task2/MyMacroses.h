@@ -7,14 +7,6 @@
 #define BOTTOM(w, i, j, M, N) (j - 1 == 0 ? 0 : w[i][j - 1])
 
 
-#define MainFunctionParallel(w, k) ( -(k) * (w))
-
-//#define MainFunctionParallel2(res) {\
-//double center1, left1, right1, top1, down1;\
-//center1 = 1;\
-//left1 = i < 15 ? 2 : 5;\
-// res = -( w[i][j] + center1 + left1);};
-
 #define MainFunctionParallel2(res,f, w, i, j, M, N, a, b, h1, h2) {\
 	double center1, left1, right1, top1, down1;\
 	center1 = w[i][j];\

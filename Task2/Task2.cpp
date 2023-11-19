@@ -27,7 +27,6 @@ int N = 0;
 int M = 0;
 int TracingPeriod = 10000;
 
-
 int main(int argc, char **argv)
 {
 	#ifdef  SHOWINFO
@@ -39,11 +38,13 @@ int main(int argc, char **argv)
 		#ifdef  SHOWINFO
 		log << "no arguments!" << endl;
 		#endif //  SHOWINFO
-		
 		return -1;
 	}
 	else
+	{
 		ReadParameters(argc, argv);
+	}
+
 	#ifdef  SHOWINFO
 	log << "M = " << M << " N = " << N << " Period = " << TracingPeriod << endl;
 	#endif //  SHOWINFO
@@ -56,10 +57,10 @@ int main(int argc, char **argv)
 		return -1;
 	}
 
-	
-
 	int sizeX = M + 1;
 	int sizeY = N + 1;
+
+	//Выделение памяти под массивы
 	double **w = new double *[sizeX];
 	double **r = new double *[sizeX];
 	double **a = new double *[sizeX];
@@ -73,8 +74,8 @@ int main(int argc, char **argv)
 		a[i] = new double[sizeY];
 		b[i] = new double[sizeY];
 		F[i] = new double[sizeY];
-	}	
-	
+	}
+
 	//Установка параметров OpenMP
 	//omp_set_nested(1);
 	//omp_set_dynamic(1);
@@ -85,8 +86,6 @@ int main(int argc, char **argv)
 	double h1 = (P1.X - P0.X) / (M);
 	double h2 = (P1.Y - P0.Y) / (N);
 
-
-	//#pragma omp parallel for collapse(2)
 	#pragma omp parallel for
 	for (int i = 0; i < sizeX; ++i)
 	{
@@ -110,6 +109,7 @@ int main(int argc, char **argv)
 	double deltaSqr2 = 0.0, deltaSqr1 = 0.0, deltaSqr = 0.0;
 	int k = 1, stopEquals = 2 * TracingPeriod;
 	int i, j;
+
 	//Вывод коэффициентов рассчёта
 	#ifdef SHOWINFO
 	{
@@ -128,7 +128,7 @@ int main(int argc, char **argv)
 		fout.close();
 	}
 	#endif
-
+	//Основной цикл
 	#pragma omp parallel default(none) shared(tauNumerator, tauDenominator, deltaSqr, w, a, b, F, k) private(i, j, rA, tau)
 	for (; k < KMAX; )
 	{
@@ -141,6 +141,7 @@ int main(int argc, char **argv)
 				MainFunctionParallel2(r[i][j], -F[i][j], w, i, j, M, N, a, b, h1, h2);
 			}
 		}
+
 		#pragma omp single nowait
 		{
 			tauNumerator = 0.0, tauDenominator = 0.0;
@@ -148,6 +149,7 @@ int main(int argc, char **argv)
 			++k;
 		}
 		#pragma omp barrier
+
 		//посчитать итерационный параметр
 		#pragma omp for collapse(2) schedule(static) reduction(+:tauNumerator, tauDenominator)
 		for (i = 1; i < M; ++i)
@@ -159,13 +161,15 @@ int main(int argc, char **argv)
 				tauDenominator += rA * rA;
 			}
 		}
+
 		//#pragma omp single
 		{
 			/*if (tauDenominator == 0 || isnan(tauDenominator))
 				tau = 0;
 			else*/
-				tau = tauNumerator / tauDenominator;
+			tau = tauNumerator / tauDenominator;
 		}
+
 		//посчитать w(k+1)
 		//посчитать точность
 		#pragma omp for schedule(static) collapse(2) nowait reduction(+:deltaSqr)  
@@ -186,17 +190,15 @@ int main(int argc, char **argv)
 		{
 			if (k % TracingPeriod == 0)
 			{
-			
 				cout << k << endl;
-				//log << k << ")";
-				//log << " delta^2 = " << deltaSqr;
-				//log << " delta^2(k-1) = " << deltaSqr1;
-				//log << " delta^2(k-2) = " << deltaSqr2;
-				//log << " tau = " << tau;
-				///*log << " tauNumerator = " << tauNumerator;
-				//log << " tauDenominator = " << tauDenominator;*/
-				//log << endl;
-				
+				log << k << ")";
+				log << " delta^2 = " << deltaSqr;
+				log << " delta^2(k-1) = " << deltaSqr1;
+				log << " delta^2(k-2) = " << deltaSqr2;
+				log << " tau = " << tau;
+				/*log << " tauNumerator = " << tauNumerator;
+				log << " tauDenominator = " << tauDenominator;*/
+				log << endl;
 
 				#ifdef WRITEFILE
 				std::ostringstream oss;
@@ -206,21 +208,6 @@ int main(int argc, char **argv)
 				fout.close();
 				#endif
 			}
-			/*else
-			{
-				deltaSqr2 = deltaSqr1;
-				deltaSqr1 = deltaSqr;
-				if (deltaSqr2 <= deltaSqr1 && deltaSqr1 <= deltaSqr || deltaSqr2 == deltaSqr)
-					--stopEquals;
-				else
-					stopEquals = 2 * TracingPeriod;
-
-				if (stopEquals <= 0)
-				{
-					log << "equals break" << endl;
-					stop = true;
-				}
-			}*/
 		}
 		#endif // SHOWINFO
 
@@ -235,7 +222,7 @@ int main(int argc, char **argv)
 	log << "time = " << (omp_get_wtime() - start);
 	#endif //  SHOWINFO	
 
-
+	//Вывод результата в файл
 	{
 		ofstream fout("f/final.txt");
 		SaveResults(w, sizeX, sizeY, fout);

@@ -14,4 +14,3 @@ struct Point
 		Y = y;
 	}
 };
-
