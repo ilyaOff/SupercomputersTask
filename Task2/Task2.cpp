@@ -8,6 +8,7 @@
 #include "MyMacroses.h"
 //#define WRITEFILE
 //#define SHOWINFO
+//#define SHOWPARAMS
 
 using namespace std;
 
@@ -39,7 +40,7 @@ int main(int argc, char **argv)
 		#ifdef  SHOWINFO
 		log << "no arguments!" << endl;
 		#endif //  SHOWINFO
-		
+
 		return -1;
 	}
 	else
@@ -56,28 +57,29 @@ int main(int argc, char **argv)
 		return -1;
 	}
 
-	
+
 
 	int sizeX = M + 1;
 	int sizeY = N + 1;
-	double **w = new double *[sizeX];
-	double **r = new double *[sizeX];
-	double **a = new double *[sizeX];
-	double **b = new double *[sizeX];
-	double **F = new double *[sizeX];
+	double *w = new double[sizeX * sizeY];
+	double *r = new double[sizeX * sizeY];
+	double *a = new double[sizeX * sizeY];
+	double *b = new double[sizeX * sizeY];
+	double *F = new double[sizeX * sizeY];
 
-	for (int i = 0; i < sizeX; ++i)
+	/*for (int i = 0; i < sizeX; ++i)
 	{
 		w[i] = new double[sizeY];
 		r[i] = new double[sizeY];
 		a[i] = new double[sizeY];
 		b[i] = new double[sizeY];
 		F[i] = new double[sizeY];
-	}	
-	
+	}*/
+
 	//Установка параметров OpenMP
 	//omp_set_nested(1);
 	//omp_set_dynamic(1);
+	//omp_set_num_threads(1);
 
 	cout << "start" << endl;
 	double start = omp_get_wtime();
@@ -93,16 +95,16 @@ int main(int argc, char **argv)
 		#pragma omp parallel for
 		for (int j = 0; j < sizeY; ++j)
 		{
-			w[i][j] = 0;
-			r[i][j] = 0;
+			w[i + j * sizeX] = 0;
+			r[i + j * sizeX] = 0;
 			double x = P0.X + i * h1;
 			double y = P0.Y + j * h2;
-			a[i][j] = CalculateA(x, y, h1, h2);
-			b[i][j] = CalculateB(x, y, h1, h2);
-			F[i][j] = CalculateF(x, y, h1, h2);
+			a[i + j * sizeX] = CalculateA(x, y, h1, h2);
+			b[i + j * sizeX] = CalculateB(x, y, h1, h2);
+			F[i + j * sizeX] = CalculateF(x, y, h1, h2);
 		}
 	}
-	w[sizeX / 2][sizeY / 2] = 1;
+	w[(M / 2) + sizeX * (N / 2)] = 1;
 
 	double tau = 0.0;
 	double rA = 0.0;
@@ -111,7 +113,7 @@ int main(int argc, char **argv)
 	int k = 1, stopEquals = 2 * TracingPeriod;
 	int i, j;
 	//Вывод коэффициентов рассчёта
-	#ifdef SHOWINFO
+	#ifdef SHOWPARAMS
 	{
 		ofstream fout("f/F.txt");
 		SaveResults(F, sizeX, sizeY, fout);
@@ -138,13 +140,16 @@ int main(int argc, char **argv)
 		{
 			for (j = 1; j < N; ++j)
 			{
-				MainFunctionParallel2(r[i][j], -F[i][j], w, i, j, M, N, a, b, h1, h2);
+				int indexJ = j * (sizeX);
+				MainFunctionParallel2(r[i + indexJ], -F[i + indexJ], w, i, indexJ, sizeX, sizeY, a, b, h1, h2);
+				//r[i + j * sizeX] = -F[i + j * sizeX] + MainFunction(w, i, j, sizeX, sizeY, a, b, h1, h2);
 			}
 		}
 		#pragma omp single nowait
 		{
 			tauNumerator = 0.0, tauDenominator = 0.0;
 			deltaSqr = 0.0;
+			++k;
 		}
 		#pragma omp barrier
 		//посчитать итерационный параметр
@@ -153,8 +158,10 @@ int main(int argc, char **argv)
 		{
 			for (j = 1; j < N; ++j)
 			{
-				MainFunctionParallel2(rA, 0, r, i, j, M, N, a, b, h1, h2);
-				tauNumerator += rA * r[i][j];
+				int indexJ = j * (sizeX);
+				MainFunctionParallel2(rA, 0, r, i, indexJ, sizeX, sizeY, a, b, h1, h2);
+				//rA = MainFunction(r, i, j, sizeX, sizeY, a, b, h1, h2);
+				tauNumerator += rA * r[i + indexJ];
 				tauDenominator += rA * rA;
 			}
 		}
@@ -163,7 +170,7 @@ int main(int argc, char **argv)
 			/*if (tauDenominator == 0 || isnan(tauDenominator))
 				tau = 0;
 			else*/
-				tau = tauNumerator / tauDenominator;
+			tau = tauNumerator / tauDenominator;
 		}
 		//посчитать w(k+1)
 		//посчитать точность
@@ -172,7 +179,7 @@ int main(int argc, char **argv)
 		{
 			for (j = 1; j < N; ++j)
 			{
-				w[i][j] = w[i][j] - tau * r[i][j];
+				w[i + j * sizeX] = w[i + j * sizeX] - tau * r[i + j * sizeX];
 			}
 		}
 
@@ -181,7 +188,7 @@ int main(int argc, char **argv)
 		{
 			for (j = 1; j < N; ++j)
 			{
-				double step = tau * r[i][j];
+				double step = tau * r[i + j * sizeX];
 
 				deltaSqr += step * step;
 			}
@@ -195,7 +202,7 @@ int main(int argc, char **argv)
 		{
 			if (k % TracingPeriod == 0)
 			{
-			
+
 				//cout << k << endl;
 				log << k << ")";
 				log << " delta^2 = " << deltaSqr;
@@ -205,7 +212,7 @@ int main(int argc, char **argv)
 				/*log << " tauNumerator = " << tauNumerator;
 				log << " tauDenominator = " << tauDenominator;*/
 				log << endl;
-				
+
 
 				#ifdef WRITEFILE
 				std::ostringstream oss;
@@ -230,7 +237,7 @@ int main(int argc, char **argv)
 					stop = true;
 				}
 			}*/
-			++k;
+
 		}
 		#endif // SHOWINFO
 		if (deltaSqr < DELTA * DELTA)
@@ -252,14 +259,14 @@ int main(int argc, char **argv)
 	}
 
 	//Освобождение памяти
-	for (int i = 0; i < sizeX; ++i)
+	/*for (int i = 0; i < sizeX; ++i)
 	{
 		delete[] w[i];
 		delete[] r[i];
 		delete[] a[i];
 		delete[] b[i];
 		delete[] F[i];
-	}
+	}*/
 	delete[] w;
 	delete[] r;
 	delete[] a;
@@ -387,31 +394,32 @@ double CalculateF(double x, double y, double h1, double h2)
 	return (s1) / (h1 * h2);
 }
 
-double MainFunction(double **w, int i, int j, int M, int N, double **a, double **b, double h1, double h2)
+double MainFunction(double *w, int i, int j, int M, int N, double *a, double *b, double h1, double h2)
 {
 	double center, left, right, top, down;
 	if (i <= 0 || i >= M || j <= 0 || j >= N)
 		return 0;
 
-	center = w[i][j];
-	left = i - 1 == 0 ? 0 : w[i - 1][j];
-	right = i + 1 == M ? 0 : w[i + 1][j];
-	top = j + 1 == N ? 0 : w[i][j + 1];
-	down = j - 1 == 0 ? 0 : w[i][j - 1];
+	center = w[i + j * (N)];
+	left = i - 1 == 0 ? 0 : w[i -1 + j * (M)];
+	right = i + 1 == M ? 0 : w[i+1 + j * (M)];
+	top = j + 1 == N ? 0 : w[i + (j+1 )* (M)];
+	down = j - 1 == 0 ? 0 : w[i + (j-1) * (M)];
 
-	double dx = (a[i + 1][j] * (right - center) - a[i][j] * (center - left)) / (h1 * h1);
-	double dy = (b[i][j + 1] * (top - center) - b[i][j] * (center - down)) / (h2 * h2);
+	double dx = (a[i + 1 + j * (M)] * (right - center) - a[i + j * (M)] * (center - left)) / (h1 * h1);
+	double dy = (b[i + (j + 1) * (M)] * (top - center) - b[i + j * (M)] * (center - down)) / (h2 * h2);
 	return -(dx + dy);
 }
 
 
-void SaveResults(double **w, int N, int M, ofstream &fileoutput)
+void SaveResults(double *w, int N, int M, ofstream &fileoutput)
 {
 	for (int j = 0; j < N; ++j)
 	{
 		for (int i = 0; i < M; ++i)
 		{
-			fileoutput << w[i][j] << " ";
+			double res = w[i + j * M];
+			fileoutput << res << " ";
 		}
 		fileoutput << ";" << endl;
 	}
