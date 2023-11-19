@@ -7,6 +7,7 @@
 #include "Task2.h"
 //#define WRITEFILE
 #define SHOWINFO
+//#define SHOWKOEF
 
 using namespace std;
 #define MainFunction2(res,f, w, i, j, M, N, a, b, h1, h2) {\
@@ -16,7 +17,7 @@ using namespace std;
 	right1 = i + 1 == M ? 0 : w[i + 1][j];\
 	top1 = j + 1 == N ? 0 : w[i][j + 1];\
 	down1 = j - 1 == 0 ? 0 : w[i][j - 1];\
-	double dx = (a[i + 1][j] * (right1 - center1) - a[i][j] * (center1 - left1)) / (h1 * h1);\
+	double dx = (a[j][i + 1] * (right1 - center1) - a[j][i] * (center1 - left1)) / (h1 * h1);\
 	double dy = (b[i][j + 1] * (top1 - center1) - b[i][j] * (center1 - down1)) / (h2 * h2);\
 	res = f -(dx + dy);};
 
@@ -60,7 +61,6 @@ int main(int argc, char **argv)
 	int sizeY = N + 1;
 	double **w = new double *[sizeX];
 	double **r = new double *[sizeX];
-	double **a = new double *[sizeX];
 	double **b = new double *[sizeX];
 	double **F = new double *[sizeX];
 
@@ -68,11 +68,15 @@ int main(int argc, char **argv)
 	{
 		w[i] = new double[sizeY];
 		r[i] = new double[sizeY];
-		a[i] = new double[sizeY];
 		b[i] = new double[sizeY];
 		F[i] = new double[sizeY];
 	}
 
+	double **a = new double *[sizeY];
+	for (int i = 0; i < sizeY; ++i)
+	{
+		a[i] = new double[sizeX];
+	}
 	for (int i = 0; i < sizeX; ++i)
 	{
 		for (int j = 0; j < sizeY; ++j)
@@ -93,11 +97,12 @@ int main(int argc, char **argv)
 	double tauNumerator = 0.0, tauDenominator = 0.0;
 	double deltaSqr2 = 0.0, deltaSqr1 = 0.0, deltaSqr = 0.0;
 	int k = 1, stopEquals = 2 * TracingPeriod;
+	#ifdef  SHOWKOEF
 	{
 		ofstream fout("f/F.txt");
 		SaveResults(F, sizeX, sizeY, fout);
 		fout.close();
-	}
+}
 	{
 		ofstream fout("f/A.txt");
 		SaveResults(a, sizeX, sizeY, fout);
@@ -108,6 +113,9 @@ int main(int argc, char **argv)
 		SaveResults(b, sizeX, sizeY, fout);
 		fout.close();
 	}
+	#endif //  SHOWKOEF
+
+	
 
 	for (; k < KMAX; /*++k*/)
 	{
@@ -200,9 +208,12 @@ int main(int argc, char **argv)
 	{
 		delete[] w[i];
 		delete[] r[i];
-		delete[] a[i];
 		delete[] b[i];
 		delete[] F[i];
+	}
+	for (int j = 0; j < sizeY; ++j)
+	{
+		delete[] a[j];
 	}
 	delete[] w;
 	delete[] r;
@@ -211,7 +222,7 @@ int main(int argc, char **argv)
 	delete[] F;
 
 	return 0;
-	}
+}
 
 void ReadParameters(int argc, char **argv)
 {
