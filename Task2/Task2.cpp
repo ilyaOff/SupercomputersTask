@@ -8,6 +8,7 @@
 #include "MyMacroses.h"
 //#define WRITEFILE
 //#define SHOWINFO
+#define SHOWDELTAGRAPHIC
 
 using namespace std;
 
@@ -29,10 +30,7 @@ int TracingPeriod = 10000;
 
 int main(int argc, char **argv)
 {
-	#ifdef  SHOWINFO
-	ofstream log("f/Log.txt");
-	#endif //  SHOWINFO
-
+	
 	if (argc == 1)
 	{
 		#ifdef  SHOWINFO
@@ -44,7 +42,10 @@ int main(int argc, char **argv)
 	{
 		ReadParameters(argc, argv);
 	}
-
+	#ifdef  SHOWINFO
+	ofstream log("f/Log.txt");
+	#endif //  SHOWINFO
+	
 	cout << "M = " << M << " N = " << N << " Period = " << TracingPeriod << endl;
 	#ifdef  SHOWINFO
 	log << "M = " << M << " N = " << N << " Period = " << TracingPeriod << endl;
@@ -54,9 +55,14 @@ int main(int argc, char **argv)
 	{
 		#ifdef  SHOWINFO
 		log << "invalid parametres (M, N)";
+		log.close();
 		#endif //  SHOWINFO		
 		return -1;
 	}
+
+	#ifdef  SHOWDELTAGRAPHIC
+	ofstream deltaLog("f/DeltaLog.txt");
+	#endif //  SHOWDELTAGRAPHIC
 
 	int sizeX = M + 1;
 	int sizeY = N + 1;
@@ -184,10 +190,10 @@ int main(int argc, char **argv)
 			}
 		}
 
+		#if defined SHOWINFO || defined SHOWDELTAGRAPHIC		
 		#pragma omp barrier
-
-		#ifdef SHOWINFO
-		#pragma omp single
+		#if defined SHOWINFO
+		#pragma omp single nowait
 		{
 			if (k % TracingPeriod == 0)
 			{
@@ -212,6 +218,16 @@ int main(int argc, char **argv)
 		}
 		#endif // SHOWINFO
 
+		#ifdef SHOWDELTAGRAPHIC
+		#pragma omp single nowait
+		{
+			deltaLog << deltaSqr << endl;
+		}
+		#endif // SHOWDELTAGRAPHIC
+		#endif // OR DEFINED
+
+		#pragma omp barrier
+		
 		if (deltaSqr < DELTA * DELTA)
 			break;
 	}
@@ -223,6 +239,13 @@ int main(int argc, char **argv)
 	log << "time = " << (omp_get_wtime() - start);
 	log.close();
 	#endif //  SHOWINFO
+
+	#ifdef SHOWDELTAGRAPHIC
+	#pragma omp single nowait
+	{
+		deltaLog.close();
+	}
+	#endif // SHOWDELTAGRAPHIC
 
 	//Вывод результата в файл
 	{
