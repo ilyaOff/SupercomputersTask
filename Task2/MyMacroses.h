@@ -15,5 +15,5 @@
 	top1 = j + 1 == N ? 0 : w[i][j + 1];\
 	down1 = j - 1 == 0 ? 0 : w[i][j - 1];\
 	double dx = (a[i + 1][j] * (right1 - center1) - a[i][j] * (center1 - left1)) / (h1 * h1);\
-	double dy = (b[i][j + 1] * (top1 - center1) - b[i][j] * (center1 - down1)) / (h2 * h2);\
+	double dy = (b[j + 1][i] * (top1 - center1) - b[j][i] * (center1 - down1)) / (h2 * h2);\
 	res = f -(dx + dy);};

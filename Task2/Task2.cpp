@@ -65,16 +65,19 @@ int main(int argc, char **argv)
 	double **w = new double *[sizeX];
 	double **r = new double *[sizeX];
 	double **a = new double *[sizeX];
-	double **b = new double *[sizeX];
 	double **F = new double *[sizeX];
 
 	for (int i = 0; i < sizeX; ++i)
 	{
 		w[i] = new double[sizeY];
 		r[i] = new double[sizeY];
-		a[i] = new double[sizeY];
-		b[i] = new double[sizeY];
+		a[i] = new double[sizeY];	
 		F[i] = new double[sizeY];
+	}
+	double **b = new double *[sizeY];
+	for (int j = 0; j < sizeY; ++j)
+	{
+		b[j] = new double[sizeX];
 	}
 
 	//Установка параметров OpenMP
@@ -98,7 +101,7 @@ int main(int argc, char **argv)
 			double x = P0.X + i * h1;
 			double y = P0.Y + j * h2;
 			a[i][j] = CalculateA(x, y, h1, h2);
-			b[i][j] = CalculateB(x, y, h1, h2);
+			b[j][i] = CalculateB(x, y, h1, h2);
 			F[i][j] = CalculateF(x, y, h1, h2);
 		}
 	}
@@ -236,8 +239,11 @@ int main(int argc, char **argv)
 		delete[] w[i];
 		delete[] r[i];
 		delete[] a[i];
-		delete[] b[i];
 		delete[] F[i];
+	}
+	for (int i = 0; i < sizeY; ++i)
+	{
+		delete[] b[i];
 	}
 	delete[] w;
 	delete[] r;
