@@ -221,7 +221,8 @@ int main(int argc, char **argv)
 	#ifdef  SHOWINFO
 	log << "stop k = " << k << endl;
 	log << "time = " << (omp_get_wtime() - start);
-	#endif //  SHOWINFO	
+	log.close();
+	#endif //  SHOWINFO
 
 	//Вывод результата в файл
 	{
