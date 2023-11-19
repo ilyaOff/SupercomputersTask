@@ -8,7 +8,6 @@
 #include "MyMacroses.h"
 //#define WRITEFILE
 //#define SHOWINFO
-//#define SHOWKOEF
 
 using namespace std;
 
@@ -40,7 +39,7 @@ int main(int argc, char **argv)
 		#ifdef  SHOWINFO
 		log << "no arguments!" << endl;
 		#endif //  SHOWINFO
-
+		
 		return -1;
 	}
 	else
@@ -57,7 +56,7 @@ int main(int argc, char **argv)
 		return -1;
 	}
 
-
+	
 
 	int sizeX = M + 1;
 	int sizeY = N + 1;
@@ -72,8 +71,8 @@ int main(int argc, char **argv)
 		r[i] = new double[sizeY];
 		b[i] = new double[sizeY];
 		F[i] = new double[sizeY];
-	}
-
+	}	
+	
 	double **a = new double *[sizeY];
 
 	for (int i = 0; i < sizeY; ++i)
@@ -102,7 +101,7 @@ int main(int argc, char **argv)
 			r[i][j] = 0;
 			double x = P0.X + i * h1;
 			double y = P0.Y + j * h2;
-			a[j][i] = CalculateA(x, y, h1, h2);
+			a[i][j] = CalculateA(x, y, h1, h2);
 			b[i][j] = CalculateB(x, y, h1, h2);
 			F[i][j] = CalculateF(x, y, h1, h2);
 		}
@@ -116,7 +115,7 @@ int main(int argc, char **argv)
 	int k = 1, stopEquals = 2 * TracingPeriod;
 	int i, j;
 	//Вывод коэффициентов рассчёта
-	#ifdef SHOWKOEF
+	#ifdef SHOWINFO
 	{
 		ofstream fout("f/F.txt");
 		SaveResults(F, sizeX, sizeY, fout);
@@ -138,20 +137,18 @@ int main(int argc, char **argv)
 	for (; k < KMAX; )
 	{
 		//посчитать невязку r
-		#pragma omp  for  collapse(2) schedule(static)
+		#pragma omp  for  collapse(2) schedule(static) 
 		for (i = 1; i < M; ++i)
 		{
 			for (j = 1; j < N; ++j)
 			{
-				MainFunctionParallelA(r[i][j], -F[i][j], w, i, j, M, N, a, h1);
-				MainFunctionParallelB(r[i][j], r[i][j], w, i, j, M, N, b, h2);
+				MainFunctionParallel2(r[i][j], -F[i][j], w, i, j, M, N, a, b, h1, h2);
 			}
 		}
 		#pragma omp single nowait
 		{
 			tauNumerator = 0.0, tauDenominator = 0.0;
 			deltaSqr = 0.0;
-			++k;
 		}
 		#pragma omp barrier
 		//посчитать итерационный параметр
@@ -160,8 +157,7 @@ int main(int argc, char **argv)
 		{
 			for (j = 1; j < N; ++j)
 			{
-				MainFunctionParallelA(rA, 0, r, i, j, M, N, a, h1,);
-				MainFunctionParallelB(rA, rA, r, i, j, M, N,  b,  h2);
+				MainFunctionParallel2(rA, 0, r, i, j, M, N, a, b, h1, h2);
 				tauNumerator += rA * r[i][j];
 				tauDenominator += rA * rA;
 			}
@@ -171,10 +167,10 @@ int main(int argc, char **argv)
 			/*if (tauDenominator == 0 || isnan(tauDenominator))
 				tau = 0;
 			else*/
-			tau = tauNumerator / tauDenominator;
+				tau = tauNumerator / tauDenominator;
 		}
-
 		//посчитать w(k+1)
+		//посчитать точность
 		#pragma omp for schedule(static) collapse(2) nowait
 		for (i = 1; i < M; ++i)
 		{
@@ -184,7 +180,6 @@ int main(int argc, char **argv)
 			}
 		}
 
-		//посчитать точность
 		#pragma omp for schedule(static) collapse(2) nowait reduction(+:deltaSqr)  
 		for (i = 1; i < M; ++i)
 		{
@@ -204,6 +199,7 @@ int main(int argc, char **argv)
 		{
 			if (k % TracingPeriod == 0)
 			{
+			
 				//cout << k << endl;
 				log << k << ")";
 				log << " delta^2 = " << deltaSqr;
@@ -213,7 +209,7 @@ int main(int argc, char **argv)
 				/*log << " tauNumerator = " << tauNumerator;
 				log << " tauDenominator = " << tauDenominator;*/
 				log << endl;
-
+				
 
 				#ifdef WRITEFILE
 				std::ostringstream oss;
@@ -223,6 +219,22 @@ int main(int argc, char **argv)
 				fout.close();
 				#endif
 			}
+			/*else
+			{
+				deltaSqr2 = deltaSqr1;
+				deltaSqr1 = deltaSqr;
+				if (deltaSqr2 <= deltaSqr1 && deltaSqr1 <= deltaSqr || deltaSqr2 == deltaSqr)
+					--stopEquals;
+				else
+					stopEquals = 2 * TracingPeriod;
+
+				if (stopEquals <= 0)
+				{
+					log << "equals break" << endl;
+					stop = true;
+				}
+			}*/
+			++k;
 		}
 		#endif // SHOWINFO
 		if (deltaSqr < DELTA * DELTA)
@@ -234,7 +246,8 @@ int main(int argc, char **argv)
 	#ifdef  SHOWINFO
 	log << "stop k = " << k << endl;
 	log << "time = " << (omp_get_wtime() - start);
-	#endif //  SHOWINFO
+	#endif //  SHOWINFO	
+
 
 	{
 		ofstream fout("f/final.txt");
@@ -250,7 +263,7 @@ int main(int argc, char **argv)
 		delete[] b[i];
 		delete[] F[i];
 	}
-	for (j = 0; j < sizeY; ++j)
+	for (j= 0; j < sizeY; ++j)
 	{
 		delete[] a[j];
 	}
