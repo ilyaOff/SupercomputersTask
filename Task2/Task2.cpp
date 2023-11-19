@@ -102,7 +102,7 @@ int main(int argc, char **argv)
 		ofstream fout("f/F.txt");
 		SaveResults(F, sizeX, sizeY, fout);
 		fout.close();
-}
+	}
 	{
 		ofstream fout("f/A.txt");
 		SaveResults(a, sizeX, sizeY, fout);
@@ -115,7 +115,7 @@ int main(int argc, char **argv)
 	}
 	#endif //  SHOWKOEF
 
-	
+
 
 	for (; k < KMAX; /*++k*/)
 	{
@@ -157,7 +157,7 @@ int main(int argc, char **argv)
 		#ifdef SHOWINFO
 		if (k % TracingPeriod == 0)
 		{
-			
+
 			log << k << ")";
 			log << " delta^2 = " << deltaSqr;
 			log << " delta^2(k-1) = " << deltaSqr1;
@@ -165,7 +165,7 @@ int main(int argc, char **argv)
 			log << " tau = " << tau;
 			/*log << " tauNumerator = " << tauNumerator;
 			log << " tauDenominator = " << tauDenominator;*/
-			log << endl;			
+			log << endl;
 
 			#ifdef WRITEFILE
 			std::ostringstream oss;
@@ -191,7 +191,7 @@ int main(int argc, char **argv)
 			log << "equals break" << endl;
 			break;
 		}
-		}
+	}
 
 	cout << "stop k = " << k << endl;
 	log << "stop k = " << k << endl;
