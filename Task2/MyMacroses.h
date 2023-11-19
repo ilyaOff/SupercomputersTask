@@ -14,6 +14,6 @@
 	right1 = i + 1 == M ? 0 : w[i + 1][j];\
 	top1 = j + 1 == N ? 0 : w[i][j + 1];\
 	down1 = j - 1 == 0 ? 0 : w[i][j - 1];\
-	double dx = (a[i + 1][j] * (right1 - center1) - a[i][j] * (center1 - left1)) / (h1 * h1);\
+	double dx = (a[j][i + 1] * (right1 - center1) - a[j][i] * (center1 - left1)) / (h1 * h1);\
 	double dy = (b[i][j + 1] * (top1 - center1) - b[i][j] * (center1 - down1)) / (h2 * h2);\
 	res = f -(dx + dy);};

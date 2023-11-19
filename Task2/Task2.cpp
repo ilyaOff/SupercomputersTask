@@ -64,7 +64,6 @@ int main(int argc, char **argv)
 	//Выделение памяти под массивы
 	double **w = new double *[sizeX];
 	double **r = new double *[sizeX];
-	double **a = new double *[sizeX];
 	double **b = new double *[sizeX];
 	double **F = new double *[sizeX];
 
@@ -72,11 +71,14 @@ int main(int argc, char **argv)
 	{
 		w[i] = new double[sizeY];
 		r[i] = new double[sizeY];
-		a[i] = new double[sizeY];
 		b[i] = new double[sizeY];
 		F[i] = new double[sizeY];
 	}
-
+	double **a = new double *[sizeY];
+	for (int i = 0; i < sizeY; ++i)
+	{
+		a[i] = new double[sizeX];
+	}
 	//Установка параметров OpenMP
 	//omp_set_nested(1);
 	//omp_set_dynamic(1);
@@ -97,7 +99,7 @@ int main(int argc, char **argv)
 			r[i][j] = 0;
 			double x = P0.X + i * h1;
 			double y = P0.Y + j * h2;
-			a[i][j] = CalculateA(x, y, h1, h2);
+			a[j][i] = CalculateA(x, y, h1, h2);
 			b[i][j] = CalculateB(x, y, h1, h2);
 			F[i][j] = CalculateF(x, y, h1, h2);
 		}
