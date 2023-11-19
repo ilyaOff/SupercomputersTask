@@ -145,6 +145,7 @@ int main(int argc, char **argv)
 		{
 			tauNumerator = 0.0, tauDenominator = 0.0;
 			deltaSqr = 0.0;
+			++k;
 		}
 		#pragma omp barrier
 		//посчитать итерационный параметр
@@ -230,7 +231,6 @@ int main(int argc, char **argv)
 					stop = true;
 				}
 			}*/
-			++k;
 		}
 		#endif // SHOWINFO
 		if (deltaSqr < DELTA * DELTA)
