@@ -45,6 +45,7 @@ int main(int argc, char **argv)
 		ReadParameters(argc, argv);
 	}
 
+	cout << "M = " << M << " N = " << N << " Period = " << TracingPeriod << endl;
 	#ifdef  SHOWINFO
 	log << "M = " << M << " N = " << N << " Period = " << TracingPeriod << endl;
 	#endif //  SHOWINFO
