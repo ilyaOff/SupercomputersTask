@@ -7,6 +7,7 @@
 #include "Task2.h"
 //#define WRITEFILE
 #define SHOWINFO
+#define SHOWDELTAGRAPHIC
 
 using namespace std;
 #define MainFunction2(res,f, w, i, j, M, N, a, b, h1, h2) {\
@@ -49,8 +50,14 @@ int main(int argc, char **argv)
 	if (M <= 0 || N <= 0)
 	{
 		log << "invalid parametres (M, N)";
+		log.close();
 		return -1;
 	}
+
+	#ifdef  SHOWDELTAGRAPHIC
+	ofstream deltaLog("f/DeltaLog.txt");
+	#endif //  SHOWDELTAGRAPHIC
+
 	double start = omp_get_wtime();
 
 	double h1 = (P1.X - P0.X) / (M);
@@ -93,6 +100,8 @@ int main(int argc, char **argv)
 	double tauNumerator = 0.0, tauDenominator = 0.0;
 	double deltaSqr2 = 0.0, deltaSqr1 = 0.0, deltaSqr = 0.0;
 	int k = 1, stopEquals = 2 * TracingPeriod;
+
+	#ifdef SHOWINFO
 	{
 		ofstream fout("f/F.txt");
 		SaveResults(F, sizeX, sizeY, fout);
@@ -108,8 +117,9 @@ int main(int argc, char **argv)
 		SaveResults(b, sizeX, sizeY, fout);
 		fout.close();
 	}
+	#endif // SHOWINFO
 
-	for (; k < KMAX; /*++k*/)
+	for (; k < KMAX; ++k)
 	{
 		//посчитать невязку r
 		for (int i = 1; i < M; ++i)
@@ -146,28 +156,38 @@ int main(int argc, char **argv)
 				deltaSqr += step * step;
 			}
 		}
-		#ifdef SHOWINFO
-		if (k % TracingPeriod == 0)
+		#if defined SHOWINFO || defined SHOWDELTAGRAPHIC
+		#if defined SHOWINFO
 		{
-			
-			log << k << ")";
-			log << " delta^2 = " << deltaSqr;
-			log << " delta^2(k-1) = " << deltaSqr1;
-			log << " delta^2(k-2) = " << deltaSqr2;
-			log << " tau = " << tau;
-			/*log << " tauNumerator = " << tauNumerator;
-			log << " tauDenominator = " << tauDenominator;*/
-			log << endl;			
+			if (k % TracingPeriod == 0)
+			{
+				cout << k << endl;
+				log << k << ")";
+				log << " delta^2 = " << deltaSqr;
+				log << " delta^2(k-1) = " << deltaSqr1;
+				log << " delta^2(k-2) = " << deltaSqr2;
+				log << " tau = " << tau;
+				/*log << " tauNumerator = " << tauNumerator;
+				log << " tauDenominator = " << tauDenominator;*/
+				log << endl;
 
-			#ifdef WRITEFILE
-			std::ostringstream oss;
-			oss << "f/result" << k << ".txt";
-			ofstream fout(oss.str());
-			SaveResults(w, N, M, fout);
-			fout.close();
-			#endif
+				#ifdef WRITEFILE
+				std::ostringstream oss;
+				oss << "f/result" << k << ".txt";
+				ofstream fout(oss.str());
+				SaveResults(w, N, M, fout);
+				fout.close();
+				#endif
+			}
 		}
 		#endif // SHOWINFO
+
+		#ifdef SHOWDELTAGRAPHIC
+		{
+			deltaLog << deltaSqr << endl;
+		}
+		#endif // SHOWDELTAGRAPHIC
+		#endif // OR DEFINED
 
 		if (deltaSqr < DELTA * DELTA)
 			break;
@@ -183,17 +203,24 @@ int main(int argc, char **argv)
 			log << "equals break" << endl;
 			break;
 		}
-		}
+	}
 
 	cout << "stop k = " << k << endl;
+	cout << "time = " << omp_get_wtime() - start << endl;
 	log << "stop k = " << k << endl;
 	log << "time = " << omp_get_wtime() - start << endl;
-	cout << "time = " << omp_get_wtime() - start << endl;
+	log.close();
 	{
 		ofstream fout("f/final.txt");
 		SaveResults(w, sizeX, sizeY, fout);
 		fout.close();
 	}
+
+	#ifdef SHOWDELTAGRAPHIC
+	{
+		deltaLog.close();
+	}
+	#endif // SHOWDELTAGRAPHIC
 
 	//Освобождение памяти
 	for (int i = 0; i < sizeX; ++i)
@@ -211,7 +238,7 @@ int main(int argc, char **argv)
 	delete[] F;
 
 	return 0;
-	}
+}
 
 void ReadParameters(int argc, char **argv)
 {
