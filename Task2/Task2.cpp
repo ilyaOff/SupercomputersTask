@@ -128,17 +128,20 @@ int main(int argc, char **argv)
 		fout.close();
 	}
 	#endif
-
+	omp_set_num_threads(omp_get_max_threads());
 	#pragma omp parallel default(none) shared(tauNumerator, tauDenominator, deltaSqr, w, a, b, F, k) private(i, j, rA, tau)
 	for (; k < KMAX; )
 	{
 		//посчитать невязку r
-		#pragma omp  for  collapse(2) schedule(static) 
-		for (i = 1; i < M; ++i)
+		#pragma omp  for  collapse(2) schedule(guided, 2)
+		for (i = M - 1; i > 0; --i)
 		{
-			for (j = 1; j < N; ++j)
+			for (j = N - 1; j > 0; --j)
 			{
-				MainFunctionParallel2(r[i][j], -F[i][j], w, i, j, M, N, a, b, h1, h2);
+				double a1 = 0, a2 = 0;
+				CalcA(a1, i + 1, j);
+				CalcA(a2, i, j);
+				MainFunctionParallel2(r[i][j], -F[i][j], w, i, j, M, N, a1, a2, b, h1, h2);
 			}
 		}
 		#pragma omp single nowait
@@ -149,12 +152,15 @@ int main(int argc, char **argv)
 		}
 		#pragma omp barrier
 		//посчитать итерационный параметр
-		#pragma omp for collapse(2) schedule(static) reduction(+:tauNumerator, tauDenominator)
-		for (i = 1; i < M; ++i)
+		#pragma omp for collapse(2) schedule(guided, 2) reduction(+:tauNumerator, tauDenominator)
+		for (i = M -1; i > 0; --i)
 		{
-			for (j = 1; j < N; ++j)
+			for (j = N -1; j > 0; --j)
 			{
-				MainFunctionParallel2(rA, 0, r, i, j, M, N, a, b, h1, h2);
+				double a1 = 0, a2 = 0;
+				CalcA(a1, i+1, j);
+				CalcA(a2, i, j);
+				MainFunctionParallel2(rA, 0, r, i, j, M, N, a1, a2, b, h1, h2);
 				tauNumerator += rA * r[i][j];
 				tauDenominator += rA * rA;
 			}
