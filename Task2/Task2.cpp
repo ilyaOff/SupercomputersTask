@@ -237,9 +237,12 @@ int main(int argc, char **argv)
 	{
 		delete[] w[i];
 		delete[] r[i];
-		delete[] a[i];
 		delete[] b[i];
 		delete[] F[i];
+	}
+	for (int i = 0; i < sizeY; ++i)
+	{
+		delete[] a[i];
 	}
 	delete[] w;
 	delete[] r;
