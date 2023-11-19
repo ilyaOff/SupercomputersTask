@@ -85,7 +85,7 @@ int main(int argc, char **argv)
 			r[i][j] = 0;
 			double x = P0.X + i * h1;
 			double y = P0.Y + j * h2;
-			a[j][i] = CalculateA(x, y, h1, h2);
+			a[i][j] = CalculateA(x, y, h1, h2);
 			b[i][j] = CalculateB(x, y, h1, h2);
 			F[i][j] = CalculateF(x, y, h1, h2);
 		}
@@ -117,7 +117,7 @@ int main(int argc, char **argv)
 
 
 
-	for (; k < KMAX; ++k)
+	for (; k < KMAX; /*++k*/)
 	{
 		//посчитать невязку r
 		for (int i = 1; i < M; ++i)
