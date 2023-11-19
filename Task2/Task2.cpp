@@ -168,28 +168,18 @@ int main(int argc, char **argv)
 		}
 		//посчитать w(k+1)
 		//посчитать точность
-		#pragma omp for schedule(static) collapse(2) nowait
-		for (i = 1; i < M; ++i)
-		{
-			for (j = 1; j < N; ++j)
-			{
-				w[i][j] = w[i][j] - tau * r[i][j];
-			}
-		}
-
 		#pragma omp for schedule(static) collapse(2) nowait reduction(+:deltaSqr)  
 		for (i = 1; i < M; ++i)
 		{
 			for (j = 1; j < N; ++j)
 			{
 				double step = tau * r[i][j];
-
+				w[i][j] = w[i][j] - step;
 				deltaSqr += step * step;
 			}
 		}
 
 		#pragma omp barrier
-
 
 		#ifdef SHOWINFO
 		#pragma omp single
@@ -197,15 +187,15 @@ int main(int argc, char **argv)
 			if (k % TracingPeriod == 0)
 			{
 			
-				//cout << k << endl;
-				log << k << ")";
-				log << " delta^2 = " << deltaSqr;
-				log << " delta^2(k-1) = " << deltaSqr1;
-				log << " delta^2(k-2) = " << deltaSqr2;
-				log << " tau = " << tau;
-				/*log << " tauNumerator = " << tauNumerator;
-				log << " tauDenominator = " << tauDenominator;*/
-				log << endl;
+				cout << k << endl;
+				//log << k << ")";
+				//log << " delta^2 = " << deltaSqr;
+				//log << " delta^2(k-1) = " << deltaSqr1;
+				//log << " delta^2(k-2) = " << deltaSqr2;
+				//log << " tau = " << tau;
+				///*log << " tauNumerator = " << tauNumerator;
+				//log << " tauDenominator = " << tauDenominator;*/
+				//log << endl;
 				
 
 				#ifdef WRITEFILE
@@ -233,6 +223,7 @@ int main(int argc, char **argv)
 			}*/
 		}
 		#endif // SHOWINFO
+
 		if (deltaSqr < DELTA * DELTA)
 			break;
 	}
