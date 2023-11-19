@@ -140,8 +140,7 @@ int main(int argc, char **argv)
 		{
 			for (j = 1; j < N; ++j)
 			{
-				int indexJ = j * (sizeX);
-				MainFunctionParallel2(r[i + indexJ], -F[i + indexJ], w, i, indexJ, sizeX, sizeY, a, b, h1, h2);
+				MainFunctionParallel2(r[i + j * sizeX], -F[i + j * sizeX], w, i, j, sizeX, sizeY, a, b, h1, h2);
 				//r[i + j * sizeX] = -F[i + j * sizeX] + MainFunction(w, i, j, sizeX, sizeY, a, b, h1, h2);
 			}
 		}
@@ -158,10 +157,9 @@ int main(int argc, char **argv)
 		{
 			for (j = 1; j < N; ++j)
 			{
-				int indexJ = j * (sizeX);
-				MainFunctionParallel2(rA, 0, r, i, indexJ, sizeX, sizeY, a, b, h1, h2);
+				MainFunctionParallel2(rA, 0, r, i, j, sizeX, sizeY, a, b, h1, h2);
 				//rA = MainFunction(r, i, j, sizeX, sizeY, a, b, h1, h2);
-				tauNumerator += rA * r[i + indexJ];
+				tauNumerator += rA * r[i + j * sizeX];
 				tauDenominator += rA * rA;
 			}
 		}
