@@ -9,6 +9,7 @@
 //#define WRITEFILE
 //#define SHOWINFO
 #define SHOWDELTAGRAPHIC
+//#define SHOWCOUT
 
 using namespace std;
 
@@ -46,7 +47,10 @@ int main(int argc, char **argv)
 	ofstream log("f/Log.txt");
 	#endif //  SHOWINFO
 	
+	#ifdef SHOWCOUT
 	cout << "M = " << M << " N = " << N << " Period = " << TracingPeriod << endl;
+	#endif // SHOWCOUT
+
 	#ifdef  SHOWINFO
 	log << "M = " << M << " N = " << N << " Period = " << TracingPeriod << endl;
 	#endif //  SHOWINFO
@@ -197,7 +201,10 @@ int main(int argc, char **argv)
 		{
 			if (k % TracingPeriod == 0)
 			{
+				#ifdef SHOWCOUT
 				cout << k << endl;
+				#endif // SHOWCOUT
+
 				log << k << ")";
 				log << " delta^2 = " << deltaSqr;
 				log << " delta^2(k-1) = " << deltaSqr1;
@@ -232,8 +239,11 @@ int main(int argc, char **argv)
 			break;
 	}
 
+	#ifdef SHOWCOUT
 	cout << "stop k = " << k << endl;
 	cout << "time = " << (omp_get_wtime() - start);
+	#endif // SHOWCOUT
+
 	#ifdef  SHOWINFO
 	log << "stop k = " << k << endl;
 	log << "time = " << (omp_get_wtime() - start);
