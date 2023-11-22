@@ -8,8 +8,8 @@
 #include "MyMacroses.h"
 //#define WRITEFILE
 //#define SHOWINFO
-#define SHOWDELTAGRAPHIC
-//#define SHOWCOUT
+//#define SHOWDELTAGRAPHIC
+//#define SHOWCOUNT
 
 using namespace std;
 
@@ -22,7 +22,7 @@ const Point P0 = Point(0.0, 0.0);
 const Point P1 = Point(3.0, 3.0);
 
 const double DELTA = 0.000001;
-const double epsilon = 0.01;
+double epsilon = 0.01;
 const int KMAX = 100000000;
 
 int N = 0;
@@ -31,36 +31,21 @@ int TracingPeriod = 10000;
 
 int main(int argc, char **argv)
 {
-	
 	if (argc == 1)
 	{
-		#ifdef  SHOWINFO
-		log << "no arguments!" << endl;
-		#endif //  SHOWINFO
+		cout << "no arguments!" << endl;
 		return -1;
 	}
 	else
 	{
 		ReadParameters(argc, argv);
 	}
-	#ifdef  SHOWINFO
-	ofstream log("f/Log.txt");
-	#endif //  SHOWINFO
-	
-	#ifdef SHOWCOUT
-	cout << "M = " << M << " N = " << N << " Period = " << TracingPeriod << endl;
-	#endif // SHOWCOUT
 
-	#ifdef  SHOWINFO
-	log << "M = " << M << " N = " << N << " Period = " << TracingPeriod << endl;
-	#endif //  SHOWINFO
+	cout << "M = " << M << " N = " << N << " Period = " << TracingPeriod << endl;
 
 	if (M <= 0 || N <= 0)
 	{
-		#ifdef  SHOWINFO
-		log << "invalid parametres (M, N)";
-		log.close();
-		#endif //  SHOWINFO		
+		cout << "invalid parametres (M, N)";
 		return -1;
 	}
 
@@ -96,6 +81,10 @@ int main(int argc, char **argv)
 
 	double h1 = (P1.X - P0.X) / (M);
 	double h2 = (P1.Y - P0.Y) / (N);
+	epsilon = h1;
+	if (h2 > h1)
+		epsilon = h2;
+	epsilon = epsilon * epsilon;
 
 	#pragma omp parallel for
 	for (int i = 0; i < sizeX; ++i)
@@ -194,25 +183,21 @@ int main(int argc, char **argv)
 			}
 		}
 
-		#if defined SHOWINFO || defined SHOWDELTAGRAPHIC		
+		#if defined SHOWCOUNT || defined SHOWDELTAGRAPHIC		
 		#pragma omp barrier
-		#if defined SHOWINFO
+		#if defined SHOWCOUNT
 		#pragma omp single nowait
 		{
 			if (k % TracingPeriod == 0)
 			{
-				#ifdef SHOWCOUT
-				cout << k << endl;
-				#endif // SHOWCOUT
-
-				log << k << ")";
-				log << " delta^2 = " << deltaSqr;
-				log << " delta^2(k-1) = " << deltaSqr1;
-				log << " delta^2(k-2) = " << deltaSqr2;
-				log << " tau = " << tau;
-				/*log << " tauNumerator = " << tauNumerator;
-				log << " tauDenominator = " << tauDenominator;*/
-				log << endl;
+				cout << k << ")";
+				cout << " delta^2 = " << deltaSqr;
+				cout << " delta^2(k-1) = " << deltaSqr1;
+				cout << " delta^2(k-2) = " << deltaSqr2;
+				cout << " tau = " << tau;
+				/*cout << " tauNumerator = " << tauNumerator;
+				cout << " tauDenominator = " << tauDenominator;*/
+				cout << endl;
 
 				#ifdef WRITEFILE
 				std::ostringstream oss;
@@ -234,21 +219,15 @@ int main(int argc, char **argv)
 		#endif // OR DEFINED
 
 		#pragma omp barrier
-		
+
 		if (deltaSqr < DELTA * DELTA)
 			break;
 	}
 
-	#ifdef SHOWCOUT
+	//#ifdef SHOWCOUNT
 	cout << "stop k = " << k << endl;
-	cout << "time = " << (omp_get_wtime() - start);
-	#endif // SHOWCOUT
-
-	#ifdef  SHOWINFO
-	log << "stop k = " << k << endl;
-	log << "time = " << (omp_get_wtime() - start);
-	log.close();
-	#endif //  SHOWINFO
+	cout << "time = " << (omp_get_wtime() - start) << endl;
+	//#endif // SHOWCOUT
 
 	#ifdef SHOWDELTAGRAPHIC
 	#pragma omp single nowait
@@ -259,9 +238,16 @@ int main(int argc, char **argv)
 
 	//Вывод результата в файл
 	{
+		#ifdef SHOWINFO
 		ofstream fout("f/final.txt");
 		SaveResults(w, sizeX, sizeY, fout);
 		fout.close();
+		#else
+		cout << endl << "result:" << endl;
+		SaveResults(w, sizeX, sizeY);
+		cout << endl;
+		#endif // SHOWINFO
+
 	}
 
 	//Освобождение памяти
@@ -417,6 +403,17 @@ double MainFunction(double **w, int i, int j, int M, int N, double **a, double *
 	return -(dx + dy);
 }
 
+void SaveResults(double **w, int N, int M)
+{
+	for (int j = 0; j < N; ++j)
+	{
+		for (int i = 0; i < M; ++i)
+		{
+			cout << w[i][j] << " ";
+		}
+		cout << ";" << endl;
+	}
+}
 
 void SaveResults(double **w, int N, int M, ofstream &fileoutput)
 {
