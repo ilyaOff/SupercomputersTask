@@ -30,7 +30,7 @@ const Point P0 = Point(0.0, 0.0);
 const Point P1 = Point(3.0, 3.0);
 
 const double DELTA = 0.000001;
-const double epsilon = 0.01;
+double epsilon = 0.01;
 const int KMAX = 100000000;
 
 int N = 0;
@@ -62,6 +62,10 @@ int main(int argc, char **argv)
 
 	double h1 = (P1.X - P0.X) / (M);
 	double h2 = (P1.Y - P0.Y) / (N);
+	epsilon = h1;
+	if (h2 > h1)
+		epsilon = h2;
+	epsilon = epsilon * epsilon;
 
 	int sizeX = M + 1;
 	int sizeY = N + 1;
