@@ -1,0 +1,54 @@
+Sender: LSF System <lsfadmin@polus-c4-ib.bmc.hpc.cs.msu.ru>
+Subject: Job 1076748: <# this file was automaticly created by mpisubmit.pl script for edu-cmc-skmodel23-614-02 #;source /polusfs/setenv/setup.SMPI;#BSUB -n 1;#BSUB -W 00:03;#BSUB -o task2.80.8.%J.txt;#BSUB -e task2Good.%J.err;OMP_NUM_THREADS=8 mpiexec task2Good M=80 N=80> in cluster <MSUCluster> Exited
+
+Job <# this file was automaticly created by mpisubmit.pl script for edu-cmc-skmodel23-614-02 #;source /polusfs/setenv/setup.SMPI;#BSUB -n 1;#BSUB -W 00:03;#BSUB -o task2.80.8.%J.txt;#BSUB -e task2Good.%J.err;OMP_NUM_THREADS=8 mpiexec task2Good M=80 N=80> was submitted from host <polus-ib.bmc.hpc.cs.msu.ru> by user <edu-cmc-skmodel23-614-02> in cluster <MSUCluster> at Fri Nov 24 20:53:45 2023
+Job was executed on host(s) <polus-c4-ib.bmc.hpc.cs.msu.ru>, in queue <short>, as user <edu-cmc-skmodel23-614-02> in cluster <MSUCluster> at Fri Nov 24 20:53:46 2023
+</home_edu/edu-cmc-skmodel23-614/edu-cmc-skmodel23-614-02> was used as the home directory.
+</home_edu/edu-cmc-skmodel23-614/edu-cmc-skmodel23-614-02/code/openmp/godEpsilon> was used as the working directory.
+Started at Fri Nov 24 20:53:46 2023
+Terminated at Fri Nov 24 20:56:42 2023
+Results reported at Fri Nov 24 20:56:42 2023
+
+Your job looked like:
+
+------------------------------------------------------------
+# LSBATCH: User input
+# this file was automaticly created by mpisubmit.pl script for edu-cmc-skmodel23-614-02 #
+source /polusfs/setenv/setup.SMPI
+#BSUB -n 1
+#BSUB -W 00:03
+#BSUB -o task2.80.8.%J.txt
+#BSUB -e task2Good.%J.err
+OMP_NUM_THREADS=8 mpiexec task2Good M=80 N=80
+
+------------------------------------------------------------
+
+TERM_RUNLIMIT: job killed after reaching LSF run time limit.
+Exited with exit code 140.
+
+Resource usage summary:
+
+    CPU time :                                   433.00 sec.
+    Max Memory :                                 21 MB
+    Average Memory :                             18.15 MB
+    Total Requested Memory :                     -
+    Delta Memory :                               -
+    Max Swap :                                   -
+    Max Processes :                              5
+    Max Threads :                                17
+    Run time :                                   181 sec.
+    Turnaround time :                            177 sec.
+
+The output (if any) follows:
+
+M = 80 N = 80 Period = 10000
+start
+--------------------------------------------------------------------------
+mpiexec noticed that process rank 0 with PID 0 on node polus-c4-ib exited on signal 12 (User defined signal 2).
+--------------------------------------------------------------------------
+
+
+PS:
+
+Read file <task2Good.1076748.err> for stderr output of this job.
+
