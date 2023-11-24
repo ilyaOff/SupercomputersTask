@@ -6,9 +6,11 @@
 #include "Point.h"
 #include "Task2.h"
 #include "MyMacroses.h"
-//#define SHOWCOUNT
 #define WRITEFILE
 #define WRITEFILER
+#define SHOWINFO
+#define SHOWDELTAGRAPHIC
+#define SHOWCOUNT
 
 using namespace std;
 
@@ -198,13 +200,34 @@ int main(int argc, char **argv)
 				cout << " tauDenominator = " << tauDenominator;*/
 				cout << endl;
 
+				
 				#ifdef WRITEFILE
 				std::ostringstream oss;
 				oss << "f/result" << k << ".txt";
 				ofstream fout(oss.str());
 				SaveResults(w, N, M, fout);
 				fout.close();
+
 				#endif
+
+				#ifdef WRITEFILER
+
+				std::ostringstream ossR;
+				ossR << "f/normaR" << k << ".txt";
+				ofstream foutR(ossR.str());
+				double norma2R = 0.0;
+				for (i = 1; i < M; ++i)
+				{
+					for (j = 1; j < N; ++j)
+					{
+						norma2R += r[i][j];
+					}
+				}
+				foutR << norma2R << endl;
+				foutR.close();
+				#endif
+
+				cout << "timeStep = " << (omp_get_wtime() - start) << endl;
 			}
 		}
 		#endif // SHOWINFO
@@ -231,9 +254,28 @@ int main(int argc, char **argv)
 	#ifdef SHOWDELTAGRAPHIC
 	#pragma omp single nowait
 	{
+		deltaLog << deltaSqr << endl;
 		deltaLog.close();
 	}
 	#endif // SHOWDELTAGRAPHIC
+
+	#ifdef WRITEFILER
+	{
+		std::ostringstream ossR;
+		ossR << "f/normaR" << k << ".txt";
+		ofstream foutR(ossR.str());
+		double norma2R = 0.0;
+		for (i = 1; i < M; ++i)
+		{
+			for (j = 1; j < N; ++j)
+			{
+				norma2R += r[i][j];
+			}
+		}
+		foutR << norma2R << endl;
+		foutR.close();
+	}
+	#endif
 
 	//Вывод результата в файл
 	{
