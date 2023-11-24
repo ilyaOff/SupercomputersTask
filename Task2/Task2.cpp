@@ -6,10 +6,10 @@
 #include "Point.h"
 #include "Task2.h"
 #include "MyMacroses.h"
-#define WRITEFILE
+//#define WRITEFILE
 #define WRITEFILER
-#define SHOWINFO
-#define SHOWDELTAGRAPHIC
+//#define SHOWINFO
+//#define SHOWDELTAGRAPHIC
 #define SHOWCOUNT
 
 using namespace std;
@@ -104,6 +104,7 @@ int main(int argc, char **argv)
 	}
 	w[sizeX / 2][sizeY / 2] = 1;
 
+	double norma2R = 0.0;
 	double tau = 0.0;
 	double rA = 0.0;
 	double tauNumerator = 0.0, tauDenominator = 0.0;
@@ -111,6 +112,9 @@ int main(int argc, char **argv)
 	int k = 1, stopEquals = 2 * TracingPeriod;
 	int i, j;
 
+	#ifdef WRITEFILER
+	ofstream foutR("f/normaR.txt");
+	#endif
 	//Вывод коэффициентов рассчёта
 	#ifdef SHOWINFO
 	{
@@ -129,8 +133,13 @@ int main(int argc, char **argv)
 		fout.close();
 	}
 	#endif
+
 	//Основной цикл
-	#pragma omp parallel default(none) shared(tauNumerator, tauDenominator, deltaSqr, w, r, a, b, F, k) private(i, j, rA, tau)
+	#ifdef WRITEFILER
+	#pragma omp parallel default(none) shared(tauNumerator, tauDenominator, deltaSqr,norma2R, foutR, w, r, a, b, F, k) private(i, j, rA, tau)
+	#elif
+	#pragma omp parallel default(none) shared(tauNumerator, tauDenominator, deltaSqr,norma2R, w, r, a, b, F, k) private(i, j, rA, tau)
+	#endif // WRITEFILER
 	for (; k < KMAX; )
 	{
 		//посчитать невязку r
@@ -148,6 +157,9 @@ int main(int argc, char **argv)
 			tauNumerator = 0.0, tauDenominator = 0.0;
 			deltaSqr = 0.0;
 			++k;
+			#ifdef WRITEFILER
+			norma2R = 0.0;
+			#endif // WRITEFILER
 		}
 		#pragma omp barrier
 
@@ -210,27 +222,23 @@ int main(int argc, char **argv)
 
 				#endif
 
-				#ifdef WRITEFILER
-
-				std::ostringstream ossR;
-				ossR << "f/normaR" << k << ".txt";
-				ofstream foutR(ossR.str());
-				double norma2R = 0.0;
-				for (i = 1; i < M; ++i)
-				{
-					for (j = 1; j < N; ++j)
-					{
-						norma2R += r[i][j];
-					}
-				}
-				foutR << norma2R << endl;
-				foutR.close();
-				#endif
-
 				cout << "timeStep = " << (omp_get_wtime() - start) << endl;
 			}
 		}
 		#endif // SHOWINFO
+
+		#ifdef WRITEFILER
+		#pragma omp barrier
+		#pragma omp for schedule(static) collapse(2) nowait reduction(+:norma2R)
+		for (i = 1; i < M; ++i)
+		{
+			for (j = 1; j < N; ++j)
+			{
+				norma2R += r[i][j]* r[i][j];
+			}
+		}
+		foutR << norma2R << endl;
+		#endif// WRITEFILER
 
 		#ifdef SHOWDELTAGRAPHIC
 		#pragma omp single nowait
@@ -261,15 +269,12 @@ int main(int argc, char **argv)
 
 	#ifdef WRITEFILER
 	{
-		std::ostringstream ossR;
-		ossR << "f/normaR" << k << ".txt";
-		ofstream foutR(ossR.str());
-		double norma2R = 0.0;
+		norma2R = 0.0;
 		for (i = 1; i < M; ++i)
 		{
 			for (j = 1; j < N; ++j)
 			{
-				norma2R += r[i][j];
+				norma2R += r[i][j] * r[i][j];
 			}
 		}
 		foutR << norma2R << endl;
