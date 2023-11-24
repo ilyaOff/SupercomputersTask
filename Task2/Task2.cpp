@@ -6,10 +6,9 @@
 #include "Point.h"
 #include "Task2.h"
 #include "MyMacroses.h"
-//#define WRITEFILE
-//#define SHOWINFO
-//#define SHOWDELTAGRAPHIC
 //#define SHOWCOUNT
+#define WRITEFILE
+#define WRITEFILER
 
 using namespace std;
 
