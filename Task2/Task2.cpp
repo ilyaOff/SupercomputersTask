@@ -130,7 +130,7 @@ int main(int argc, char **argv)
 	}
 	#endif
 	//Основной цикл
-	#pragma omp parallel default(none) shared(tauNumerator, tauDenominator, deltaSqr, w, a, b, F, k) private(i, j, rA, tau)
+	#pragma omp parallel default(none) shared(tauNumerator, tauDenominator, deltaSqr, w, r, a, b, F, k) private(i, j, rA, tau)
 	for (; k < KMAX; )
 	{
 		//посчитать невязку r
