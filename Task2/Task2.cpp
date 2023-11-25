@@ -135,11 +135,7 @@ int main(int argc, char **argv)
 	#endif
 
 	//Основной цикл
-	#ifdef WRITEFILER
-	#pragma omp parallel default(none) shared(tauNumerator, tauDenominator, deltaSqr,norma2R, foutR, w, r, a, b, F, k) private(i, j, rA, tau)
-	#elif
-	#pragma omp parallel default(none) shared(tauNumerator, tauDenominator, deltaSqr,norma2R, w, r, a, b, F, k) private(i, j, rA, tau)
-	#endif // WRITEFILER
+	#pragma omp parallel private(i, j, rA, tau)
 	for (; k < KMAX; )
 	{
 		//посчитать невязку r
@@ -212,7 +208,7 @@ int main(int argc, char **argv)
 				cout << " tauDenominator = " << tauDenominator;*/
 				cout << endl;
 
-				
+
 				#ifdef WRITEFILE
 				std::ostringstream oss;
 				oss << "f/result" << k << ".txt";
@@ -229,15 +225,22 @@ int main(int argc, char **argv)
 
 		#ifdef WRITEFILER
 		#pragma omp barrier
-		#pragma omp for schedule(static) collapse(2) nowait reduction(+:norma2R)
-		for (i = 1; i < M; ++i)
+		if (k % TracingPeriod == 0)
 		{
-			for (j = 1; j < N; ++j)
+			#pragma omp for schedule(static) collapse(2) reduction(+:norma2R)
+			for (i = 1; i < M; ++i)
 			{
-				norma2R += r[i][j]* r[i][j];
+				for (j = 1; j < N; ++j)
+				{
+					norma2R += r[i][j] * r[i][j];
+				}
+			}
+			#pragma omp single
+			{
+				foutR << norma2R << ";" << endl;
+				norma2R = 0;
 			}
 		}
-		foutR << norma2R << endl;
 		#endif// WRITEFILER
 
 		#ifdef SHOWDELTAGRAPHIC
