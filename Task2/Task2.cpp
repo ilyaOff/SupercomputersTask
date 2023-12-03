@@ -1,7 +1,7 @@
 ﻿#include <iostream>
 #include <string> 
 #include <sstream>
-#include<fstream>
+#include <fstream>
 #include <omp.h>
 #include "Point.h"
 #include "Task2.h"
@@ -11,6 +11,7 @@
 //#define SHOWINFO
 //#define SHOWDELTAGRAPHIC
 #define SHOWCOUNT
+#define SHOWERRORGRAPHIC
 
 using namespace std;
 
@@ -73,6 +74,17 @@ int main(int argc, char **argv)
 		F[i] = new double[sizeY];
 	}
 
+	#ifdef SHOWERRORGRAPHIC
+	double **err = new double *[sizeX];
+	double **rAGrid = new double *[sizeX];
+
+	for (int i = 0; i < sizeX; ++i)
+	{
+		err[i] = new double[sizeY];
+		rAGrid[i] = new double[sizeY];
+	}
+	#endif // SHOWERRORGRAPHIC
+
 	//Установка параметров OpenMP
 	//omp_set_nested(1);
 	//omp_set_dynamic(1);
@@ -86,7 +98,7 @@ int main(int argc, char **argv)
 	if (h2 > h1)
 		epsilon = h2;
 	epsilon = epsilon * epsilon;
-
+	
 	#pragma omp parallel for
 	for (int i = 0; i < sizeX; ++i)
 	{
@@ -100,6 +112,9 @@ int main(int argc, char **argv)
 			a[i][j] = CalculateA(x, y, h1, h2);
 			b[i][j] = CalculateB(x, y, h1, h2);
 			F[i][j] = CalculateF(x, y, h1, h2);
+			#ifdef SHOWERRORGRAPHIC
+			err[i][j] = 0;
+			#endif
 		}
 	}
 	w[sizeX / 2][sizeY / 2] = 1;
@@ -108,8 +123,8 @@ int main(int argc, char **argv)
 	double tau = 0.0;
 	double rA = 0.0;
 	double tauNumerator = 0.0, tauDenominator = 0.0;
-	double deltaSqr2 = 0.0, deltaSqr1 = 0.0, deltaSqr = 0.0;
-	int k = 1, stopEquals = 2 * TracingPeriod;
+	double deltaSqr = 0.0;
+	int k = 1;
 	int i, j;
 
 	#ifdef WRITEFILER
@@ -166,6 +181,11 @@ int main(int argc, char **argv)
 			for (j = 1; j < N; ++j)
 			{
 				MainFunctionParallel2(rA, 0, r, i, j, M, N, a, b, h1, h2);
+
+				#ifdef SHOWERRORGRAPHIC
+				rAGrid[i][j] = rA;
+				#endif // SHOWERRORGRAPHIC
+
 				tauNumerator += rA * r[i][j];
 				tauDenominator += rA * rA;
 			}
@@ -181,18 +201,60 @@ int main(int argc, char **argv)
 
 		//посчитать w(k+1)
 		//посчитать точность
-		#pragma omp for schedule(static) collapse(2) nowait reduction(+:deltaSqr)  
+		#pragma omp for schedule(static) collapse(2) nowait reduction(+:deltaSqr)
 		for (i = 1; i < M; ++i)
 		{
 			for (j = 1; j < N; ++j)
 			{
 				double step = tau * r[i][j];
 				w[i][j] = w[i][j] - step;
+
 				deltaSqr += step * step;
 			}
 		}
 
-		#if defined SHOWCOUNT || defined SHOWDELTAGRAPHIC		
+		#ifdef SHOWERRORGRAPHIC
+		if (k % TracingPeriod == 0)
+		{
+			#pragma omp for schedule(static) collapse(2)
+			for (i = 1; i < M; ++i)
+			{
+				for (j = 1; j < N; ++j)
+				{
+					err[i][j] = -tau * r[i][j];
+				}
+			}
+
+			#pragma omp single nowait
+			{
+				std::ostringstream oss;
+				oss << "f/RAA/errorGrid" << k << ".txt";
+				ofstream fout(oss.str());
+				SaveResults(rAGrid, sizeX, sizeY, fout);
+				fout.close();
+			}
+
+			#pragma omp single nowait
+			{
+				std::ostringstream oss;
+				oss << "f/err/errorGrid" << k << ".txt";
+				ofstream fout(oss.str());
+				SaveResults(err, sizeX, sizeY, fout);
+				fout.close();
+			}
+
+			#pragma omp single nowait
+			{
+				std::ostringstream oss;
+				oss << "f/Rerr/errorGrid" << k << ".txt";
+				ofstream fout(oss.str());
+				SaveResults(r, sizeX, sizeY, fout);
+				fout.close();
+			}
+		}
+		#endif // SHOWERRORGRAPHIC
+
+		#if defined SHOWCOUNT || defined SHOWDELTAGRAPHIC
 		#pragma omp barrier
 		#if defined SHOWCOUNT
 		#pragma omp single nowait
@@ -201,8 +263,6 @@ int main(int argc, char **argv)
 			{
 				cout << k << ")";
 				cout << " delta^2 = " << deltaSqr;
-				cout << " delta^2(k-1) = " << deltaSqr1;
-				cout << " delta^2(k-2) = " << deltaSqr2;
 				cout << " tau = " << tau;
 				/*cout << " tauNumerator = " << tauNumerator;
 				cout << " tauDenominator = " << tauDenominator;*/
@@ -213,7 +273,7 @@ int main(int argc, char **argv)
 				std::ostringstream oss;
 				oss << "f/result" << k << ".txt";
 				ofstream fout(oss.str());
-				SaveResults(w, N, M, fout);
+				SaveResults(w, sizeX, sizeY, fout);
 				fout.close();
 
 				#endif
@@ -235,6 +295,7 @@ int main(int argc, char **argv)
 					norma2R += r[i][j] * r[i][j];
 				}
 			}
+
 			#pragma omp single
 			{
 				foutR << norma2R << ";" << endl;
@@ -285,6 +346,30 @@ int main(int argc, char **argv)
 	}
 	#endif
 
+	#ifdef SHOWERRORGRAPHIC
+	{
+		std::ostringstream oss;
+		oss << "f/RAA/errorGrid" << k << ".txt";
+		ofstream fout(oss.str());
+		SaveResults(rAGrid, sizeX, sizeY, fout);
+		fout.close();
+	}
+	{
+		std::ostringstream oss;
+		oss << "f/Rerr/errorGrid" << k << ".txt";
+		ofstream fout(oss.str());
+		SaveResults(r, sizeX, sizeY, fout);
+		fout.close();
+	}
+	{
+		std::ostringstream oss;
+		oss << "f/err/errorGrid" << k << ".txt";
+		ofstream fout(oss.str());
+		SaveResults(err, sizeX, sizeY, fout);
+		fout.close();
+	}
+	#endif // SHOWERRORGRAPHIC
+
 	//Вывод результата в файл
 	{
 		#ifdef SHOWINFO
@@ -293,7 +378,7 @@ int main(int argc, char **argv)
 		fout.close();
 		#else
 		cout << endl << "result:" << endl;
-		SaveResults(w, sizeX, sizeY);
+		//SaveResults(w, sizeX, sizeY);
 		cout << endl;
 		#endif // SHOWINFO
 
@@ -307,12 +392,22 @@ int main(int argc, char **argv)
 		delete[] a[i];
 		delete[] b[i];
 		delete[] F[i];
+		#ifdef SHOWERRORGRAPHIC
+		delete[] err[i];
+		delete[] rAGrid[i];
+		#endif // SHOWERRORGRAPHIC
+
 	}
 	delete[] w;
 	delete[] r;
 	delete[] a;
 	delete[] b;
 	delete[] F;
+
+	#ifdef SHOWERRORGRAPHIC
+	delete[] err;
+	delete[] rAGrid;
+	#endif // SHOWERRORGRAPHIC
 
 	return 0;
 }
