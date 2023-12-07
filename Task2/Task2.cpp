@@ -3,6 +3,7 @@
 #include <sstream>
 #include <fstream>
 #include <omp.h>
+#include <mpi.h>
 #include "Point.h"
 #include "Task2.h"
 #include "MyMacroses.h"
@@ -33,6 +34,17 @@ int TracingPeriod = 10000;
 
 int main(int argc, char **argv)
 {
+	int numtasks, rank;
+
+	MPI_Init(&argc, &argv);
+
+	MPI_Comm_rank(MPI_COMM_WORLD, &rank);
+	MPI_Comm_size(MPI_COMM_WORLD, &numtasks);
+
+	cout << "HELLO MPI. id process = " << rank << " from " << numtasks << " processes" << endl;	
+
+	MPI_Finalize();
+	return 0;
 	if (argc == 1)
 	{
 		cout << "no arguments!" << endl;
