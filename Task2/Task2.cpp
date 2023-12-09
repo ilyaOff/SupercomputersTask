@@ -35,14 +35,50 @@ int TracingPeriod = 10000;
 int main(int argc, char **argv)
 {
 	int numtasks, rank;
+	MPI_Comm vu;
+	int dims[2], period[2], reorder;
+	int coord[2];
 
 	MPI_Init(&argc, &argv);
 
 	MPI_Comm_rank(MPI_COMM_WORLD, &rank);
 	MPI_Comm_size(MPI_COMM_WORLD, &numtasks);
 
-	cout << "HELLO MPI. id process = " << rank << " from " << numtasks << " processes" << endl;	
+	dims[0] = 0; dims[1] = 0;
+	MPI_Dims_create(numtasks, 2, dims);
+	period[0] = false; period[1] = false;
+	reorder = true;
+	MPI_Cart_create(MPI_COMM_WORLD, 2, dims, period, reorder, &vu);
+	int source, destination;
+	MPI_Cart_shift(vu, 0, 1, &source, &destination);
 
+	MPI_Status status;
+	int message = -1;
+	if (rank % 4 < 2)
+	{
+		if(destination != -1)
+			MPI_Send(&rank, 1, MPI_INT, destination, 9, vu);
+		if (source != -1)
+			MPI_Recv(&message, 1, MPI_INT, source, 9, vu, &status);
+	}
+	else
+	{
+		if (source != -1)
+			MPI_Recv(&message, 1, MPI_INT, source, 9, vu, &status);
+		if (destination != -1)
+			MPI_Send(&rank, 1, MPI_INT, destination, 9, vu);
+	}
+
+	if (rank == 0)
+	{
+		cout << dims[0] << " " << dims[1] << endl;
+	}
+	cout << "HELLO MPI. id process = " << rank << " from " << numtasks << " processes" << endl;	
+	cout << rank << " I get message " << message << " from " << source << endl;
+
+	MPI_Cart_coords(vu, rank, 2, coord);
+
+	cout << rank << " coodinates = (" << coord[0] << "; " << coord[1] << ")" << endl;
 	MPI_Finalize();
 	return 0;
 	if (argc == 1)
