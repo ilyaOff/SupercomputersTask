@@ -2,6 +2,10 @@
 
 void ReadParameters(int argc, char **argv);
 
+void CreateGridCommunicator(int numtasks, MPI_Comm &vu, int *dims);
+int GetCountElementInCell(int lengthBigGrid, int maxElemets);
+int CalculateSize(int lengthBigGrid, int maxElemets, int gridCoordinate);
+
 double CalculateA(double x, double y, double h1, double h2);
 double CalculateB(double x, double y, double h1, double h2);
 double CalculateF(double x, double y, double h1, double h2);

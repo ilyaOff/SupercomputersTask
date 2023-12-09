@@ -8,11 +8,12 @@
 #include "Task2.h"
 #include "MyMacroses.h"
 //#define WRITEFILE
-#define WRITEFILER
+//#define WRITEFILER
 //#define SHOWINFO
+#define RESULTINFILE
 //#define SHOWDELTAGRAPHIC
 #define SHOWCOUNT
-#define SHOWERRORGRAPHIC
+//#define SHOWERRORGRAPHIC
 
 using namespace std;
 
@@ -34,77 +35,90 @@ int TracingPeriod = 10000;
 
 int main(int argc, char **argv)
 {
-	int numtasks, rank;
-	MPI_Comm vu;
-	int dims[2], period[2], reorder;
-	int coord[2];
-
 	MPI_Init(&argc, &argv);
 
+	int numtasks, rank;
 	MPI_Comm_rank(MPI_COMM_WORLD, &rank);
 	MPI_Comm_size(MPI_COMM_WORLD, &numtasks);
 
-	dims[0] = 0; dims[1] = 0;
-	MPI_Dims_create(numtasks, 2, dims);
-	period[0] = false; period[1] = false;
-	reorder = true;
-	MPI_Cart_create(MPI_COMM_WORLD, 2, dims, period, reorder, &vu);
-	int source, destination;
-	MPI_Cart_shift(vu, 0, 1, &source, &destination);
-
-	MPI_Status status;
-	int message = -1;
-	if (rank % 4 < 2)
-	{
-		if(destination != -1)
-			MPI_Send(&rank, 1, MPI_INT, destination, 9, vu);
-		if (source != -1)
-			MPI_Recv(&message, 1, MPI_INT, source, 9, vu, &status);
-	}
-	else
-	{
-		if (source != -1)
-			MPI_Recv(&message, 1, MPI_INT, source, 9, vu, &status);
-		if (destination != -1)
-			MPI_Send(&rank, 1, MPI_INT, destination, 9, vu);
-	}
-
 	if (rank == 0)
 	{
-		cout << dims[0] << " " << dims[1] << endl;
-	}
-	cout << "HELLO MPI. id process = " << rank << " from " << numtasks << " processes" << endl;	
-	cout << rank << " I get message " << message << " from " << source << endl;
+		if (argc == 1)
+		{
+			cout << "no arguments!" << endl;
+			M = N = 0;
+		}
+		else
+		{
+			ReadParameters(argc, argv);
+		}
 
-	MPI_Cart_coords(vu, rank, 2, coord);
-
-	cout << rank << " coodinates = (" << coord[0] << "; " << coord[1] << ")" << endl;
-	MPI_Finalize();
-	return 0;
-	if (argc == 1)
-	{
-		cout << "no arguments!" << endl;
-		return -1;
-	}
-	else
-	{
-		ReadParameters(argc, argv);
+		cout << "M = " << M << " N = " << N << " Period = " << TracingPeriod << endl;
 	}
 
-	cout << "M = " << M << " N = " << N << " Period = " << TracingPeriod << endl;
-
+	int size[2];
+	size[0] = M;
+	size[1] = N;
+	MPI_Bcast(size, 2, MPI_INT, 0, MPI_COMM_WORLD);
+	M = size[0];
+	N = size[1];
 	if (M <= 0 || N <= 0)
 	{
 		cout << "invalid parametres (M, N)";
+		MPI_Finalize();
 		return -1;
 	}
+
+	double h1 = (P1.X - P0.X) / (M);
+	double h2 = (P1.Y - P0.Y) / (N);
+	epsilon = h1;
+	if (h2 > h1)
+		epsilon = h2;
+	epsilon = epsilon * epsilon;
+
+	MPI_Comm vu;
+	int dims[2];
+	CreateGridCommunicator(numtasks, vu, dims);
+
+	int upNode, downNode, leftNode, rightNode;
+	MPI_Cart_shift(vu, 0, 1, &upNode, &downNode);
+	MPI_Cart_shift(vu, 1, 1, &leftNode, &rightNode);
+
+	MPI_Status status;
+	int message = -1;
+	int messageNode = -1;
+	if (rank % 2 == 0)
+	{
+		messageNode = rightNode;
+		MPI_Send(&rank, 1, MPI_INT, messageNode, 9, vu);
+		MPI_Recv(&message, 1, MPI_INT, messageNode, 9, vu, &status);
+	}
+	else
+	{
+		messageNode = leftNode;
+		MPI_Recv(&message, 1, MPI_INT, messageNode, 9, vu, &status);
+		MPI_Send(&rank, 1, MPI_INT, messageNode, 9, vu);
+	}
+
+	cout << "HELLO MPI. id process = " << rank << " from " << numtasks << " processes" << endl;
+	cout << rank << " I get message " << message << " from " << messageNode << endl;
+	cout << rank << " UP " << upNode << " down " << downNode << " left " << leftNode << " right " << rightNode << endl;
+
+	int coord[2];
+	MPI_Cart_coords(vu, rank, 2, coord);
+
+	int sizeX = CalculateSize(M, dims[0], coord[0]);
+	int sizeY = CalculateSize(N, dims[1], coord[1]);
+
+	cout << rank << " elements = (" << sizeX << "; " << sizeY << ")" << endl;
+	MPI_Finalize();
+	return 0;
 
 	#ifdef  SHOWDELTAGRAPHIC
 	ofstream deltaLog("f/DeltaLog.txt");
 	#endif //  SHOWDELTAGRAPHIC
 
-	int sizeX = M + 1;
-	int sizeY = N + 1;
+
 
 	//Выделение памяти под массивы
 	double **w = new double *[sizeX];
@@ -112,6 +126,8 @@ int main(int argc, char **argv)
 	double **a = new double *[sizeX];
 	double **b = new double *[sizeX];
 	double **F = new double *[sizeX];
+	double *sharedVerticalW = new double[sizeX];
+	double *sharedHorizontalW = new double[sizeY];
 
 	for (int i = 0; i < sizeX; ++i)
 	{
@@ -140,23 +156,28 @@ int main(int argc, char **argv)
 	cout << "start" << endl;
 	double start = omp_get_wtime();
 
-	double h1 = (P1.X - P0.X) / (M);
-	double h2 = (P1.Y - P0.Y) / (N);
-	epsilon = h1;
-	if (h2 > h1)
-		epsilon = h2;
-	epsilon = epsilon * epsilon;
-	
-	#pragma omp parallel for
+
 	for (int i = 0; i < sizeX; ++i)
 	{
-		#pragma omp parallel for
+		sharedVerticalW[i] = 0;
+	}
+
+	for (int i = 0; i < sizeY; ++i)
+	{
+		sharedHorizontalW[i] = 0;
+	}
+
+	int shiftX = coord[0] * GetCountElementInRow(M, dims[0]) - 1;
+	int shiftY = coord[1] * GetCountElementInRow(N, dims[1]) - 1;
+
+	for (int i = 0; i < sizeX; ++i)
+	{
 		for (int j = 0; j < sizeY; ++j)
 		{
 			w[i][j] = 0;
 			r[i][j] = 0;
-			double x = P0.X + i * h1;
-			double y = P0.Y + j * h2;
+			double x = P0.X + (i + shiftX) * h1;
+			double y = P0.Y + (j + shiftY) * h2;
 			a[i][j] = CalculateA(x, y, h1, h2);
 			b[i][j] = CalculateB(x, y, h1, h2);
 			F[i][j] = CalculateF(x, y, h1, h2);
@@ -165,7 +186,11 @@ int main(int argc, char **argv)
 			#endif
 		}
 	}
-	w[sizeX / 2][sizeY / 2] = 1;
+
+	int middleX = (M + 1) / 2 - shiftX;
+	int middleY = (N + 1) / 2 - shiftY;
+	if(middleX >= 0 && middleX < sizeX && middleY >= 0 && middleY < sizeY)
+		w[middleX][middleY] = 1;
 
 	double norma2R = 0.0;
 	double tau = 0.0;
@@ -197,21 +222,23 @@ int main(int argc, char **argv)
 	}
 	#endif
 
+	int Mfor = sizeX - 1;
+	int Nfor = sizeY - 1;
 	//Основной цикл
 	#pragma omp parallel private(i, j, rA, tau)
 	for (; k < KMAX; )
 	{
 		//посчитать невязку r
-		#pragma omp  for  collapse(2) schedule(static) 
-		for (i = 1; i < M; ++i)
+		//#pragma omp  for collapse(2) schedule(static)
+		for (i = 1; i < Mfor; ++i)
 		{
-			for (j = 1; j < N; ++j)
+			for (j = 1; j < Nfor; ++j)
 			{
-				MainFunctionParallel2(r[i][j], -F[i][j], w, i, j, M, N, a, b, h1, h2);
+				MainFunctionParallel2(r[i][j], -F[i][j], w, i, j, Mfor, Nfor, a, b, h1, h2);
 			}
 		}
 
-		#pragma omp single nowait
+		//#pragma omp single nowait
 		{
 			tauNumerator = 0.0, tauDenominator = 0.0;
 			deltaSqr = 0.0;
@@ -220,13 +247,13 @@ int main(int argc, char **argv)
 			norma2R = 0.0;
 			#endif // WRITEFILER
 		}
-		#pragma omp barrier
+		//#pragma omp barrier
 
 		//посчитать итерационный параметр
-		#pragma omp for collapse(2) schedule(static) reduction(+:tauNumerator, tauDenominator)
-		for (i = 1; i < M; ++i)
+		//#pragma omp for collapse(2) schedule(static) reduction(+:tauNumerator, tauDenominator)
+		for (i = 1; i < Mfor; ++i)
 		{
-			for (j = 1; j < N; ++j)
+			for (j = 1; j < Nfor; ++j)
 			{
 				MainFunctionParallel2(rA, 0, r, i, j, M, N, a, b, h1, h2);
 
@@ -249,7 +276,7 @@ int main(int argc, char **argv)
 
 		//посчитать w(k+1)
 		//посчитать точность
-		#pragma omp for schedule(static) collapse(2) nowait reduction(+:deltaSqr)
+		//#pragma omp for schedule(static) collapse(2) nowait reduction(+:deltaSqr)
 		for (i = 1; i < M; ++i)
 		{
 			for (j = 1; j < N; ++j)
@@ -303,13 +330,13 @@ int main(int argc, char **argv)
 		#endif // SHOWERRORGRAPHIC
 
 		#if defined SHOWCOUNT || defined SHOWDELTAGRAPHIC
-		#pragma omp barrier
+		//#pragma omp barrier
 		#if defined SHOWCOUNT
-		#pragma omp single nowait
+		//#pragma omp single nowait
 		{
 			if (k % TracingPeriod == 0)
 			{
-				cout << k << ")";
+				cout << k << " node " << rank << ")";
 				cout << " delta^2 = " << deltaSqr;
 				cout << " tau = " << tau;
 				/*cout << " tauNumerator = " << tauNumerator;
@@ -332,7 +359,7 @@ int main(int argc, char **argv)
 		#endif // SHOWINFO
 
 		#ifdef WRITEFILER
-		#pragma omp barrier
+		//#pragma omp barrier
 		if (k % TracingPeriod == 0)
 		{
 			#pragma omp for schedule(static) collapse(2) reduction(+:norma2R)
@@ -353,14 +380,14 @@ int main(int argc, char **argv)
 		#endif// WRITEFILER
 
 		#ifdef SHOWDELTAGRAPHIC
-		#pragma omp single nowait
+		//#pragma omp single nowait
 		{
 			deltaLog << deltaSqr << endl;
 		}
 		#endif // SHOWDELTAGRAPHIC
 		#endif // OR DEFINED
 
-		#pragma omp barrier
+		//#pragma omp barrier
 
 		if (deltaSqr < DELTA * DELTA)
 			break;
@@ -420,16 +447,17 @@ int main(int argc, char **argv)
 
 	//Вывод результата в файл
 	{
-		#ifdef SHOWINFO
-		ofstream fout("f/final.txt");
+		#ifdef RESULTINFILE
+		std::ostringstream oss;
+		oss << "f/final" << rank << ".txt";
+		ofstream fout(oss.str());
 		SaveResults(w, sizeX, sizeY, fout);
 		fout.close();
 		#else
 		cout << endl << "result:" << endl;
 		//SaveResults(w, sizeX, sizeY);
 		cout << endl;
-		#endif // SHOWINFO
-
+		#endif // RESULTINFILE
 	}
 
 	//Освобождение памяти
@@ -451,6 +479,9 @@ int main(int argc, char **argv)
 	delete[] a;
 	delete[] b;
 	delete[] F;
+	delete[] sharedVerticalW;
+	delete[] sharedHorizontalW;
+
 
 	#ifdef SHOWERRORGRAPHIC
 	delete[] err;
@@ -482,6 +513,33 @@ void ReadParameters(int argc, char **argv)
 		}
 	}
 
+}
+
+void CreateGridCommunicator(int numtasks, MPI_Comm &vu, int *dims)
+{
+	int period[2], reorder;
+
+
+	dims[0] = 0; dims[1] = 0;
+	MPI_Dims_create(numtasks, 2, dims);
+
+	period[0] = false; period[1] = false;
+	reorder = true;
+	MPI_Cart_create(MPI_COMM_WORLD, 2, dims, period, reorder, &vu);
+}
+
+int GetCountElementInRow(int lengthBigGrid, int maxElemets)
+{
+	return (lengthBigGrid + 1) / maxElemets;
+}
+
+int CalculateSize(int lengthBigGrid, int maxElemets, int gridCoordinate)
+{
+	int size = GetCountElementInRow(lengthBigGrid, maxElemets);
+	if (gridCoordinate == maxElemets - 1)
+		size = (M + 1) - size * gridCoordinate;
+	size += 2;//Для обмена с соседними узлами на сетке
+	return size;
 }
 
 double CalculateA(double x, double y, double h1, double h2)
