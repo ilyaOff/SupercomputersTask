@@ -83,8 +83,8 @@ int main(int argc, char **argv)
 	CreateGridCommunicator(numtasks, vu, dims);
 
 	int topNode, downNode, leftNode, rightNode;
-	MPI_Cart_shift(vu, 0, 1, &topNode, &downNode);
-	MPI_Cart_shift(vu, 1, 1, &leftNode, &rightNode);
+	MPI_Cart_shift(vu, 1, 1, &topNode, &downNode);
+	MPI_Cart_shift(vu, 0, 1, &leftNode, &rightNode);
 
 	/*MPI_Status status;
 	int message = -1;
@@ -227,12 +227,13 @@ int main(int argc, char **argv)
 	int Mfor = sizeX - 1;
 	int Nfor = sizeY - 1;
 	//Основной цикл
-	#pragma omp parallel private(i, j, rA, tau)
-	for (; k < KMAX; )
+	//#pragma omp parallel private(i, j, rA, tau)
+	for (;  k < KMAX; )
 	{
+		//cout << "1 with k =  " << k << endl;
 		//записать значения массива от соседей
 		BorderPointExchange(w, sharedWbyX, sharedWbyY, sizeX, sizeY, coord, rightNode, leftNode, downNode, topNode, vu);
-
+		//cout << "2 with k =  " << k << endl;
 		//посчитать невязку r
 		//#pragma omp  for collapse(2) schedule(static)
 		for (i = 1; i < Mfor; ++i)
@@ -243,6 +244,7 @@ int main(int argc, char **argv)
 			}
 		}
 
+		//cout << "3 with k =  " << k << endl;
 		//#pragma omp single nowait
 		{
 			tauNumerator = 0.0, tauDenominator = 0.0;
@@ -253,16 +255,16 @@ int main(int argc, char **argv)
 			#endif // WRITEFILER
 		}
 		//#pragma omp barrier
-
+		//cout << "4 with k =  " << k << endl;
 		//посчитать итерационный параметр
 		BorderPointExchange(r, sharedWbyX, sharedWbyY, sizeX, sizeY, coord, rightNode, leftNode, downNode, topNode, vu);
-
+		//cout << "5 with k =  " << k << endl;
 		//#pragma omp for collapse(2) schedule(static) reduction(+:tauNumerator, tauDenominator)
 		for (i = 1; i < Mfor; ++i)
 		{
 			for (j = 1; j < Nfor; ++j)
 			{
-				MainFunctionParallel2(rA, 0, r, i, j, M, N, a, b, h1, h2);
+				MainFunctionParallel2(rA, 0, r, i, j, Mfor, Nfor, a, b, h1, h2);
 
 				#ifdef SHOWERRORGRAPHIC
 				rAGrid[i][j] = rA;
@@ -273,6 +275,7 @@ int main(int argc, char **argv)
 			}
 		}
 
+		//cout << "6 with k =  " << k << endl;
 		//#pragma omp single
 		{
 			tau4Send[0] = tauNumerator;
@@ -285,13 +288,13 @@ int main(int argc, char **argv)
 			else*/
 			tau = tauNumerator / tauDenominator;
 		}
-
+		//cout << "7 with k =  " << k << endl;
 		//посчитать w(k+1)
 		//посчитать точность
 		//#pragma omp for schedule(static) collapse(2) nowait reduction(+:deltaSqr)
-		for (i = 1; i < M; ++i)
+		for (i = 1; i < Mfor; ++i)
 		{
-			for (j = 1; j < N; ++j)
+			for (j = 1; j < Nfor; ++j)
 			{
 				double step = tau * r[i][j];
 				w[i][j] = w[i][j] - step;
@@ -299,17 +302,20 @@ int main(int argc, char **argv)
 				deltaSqr += step * step;
 			}
 		}
+		//cout << "8 with k =  " << k << endl;
 
+		//cout << "delta before" << deltaSqr << endl;
 		//#pragma omp single
 		{
 			MPI_Allreduce(&deltaSqr, &deltaSqr4Recive, 1, MPI_DOUBLE, MPI_SUM, vu);
 			deltaSqr = deltaSqr4Recive;
 		}
-
+		//cout << "delta after " << deltaSqr << endl;
+		//cout << "9 with k =  " << k << endl;
 		#ifdef SHOWERRORGRAPHIC
 		if (k % TracingPeriod == 0)
 		{
-			#pragma omp for schedule(static) collapse(2)
+			//#pragma omp for schedule(static) collapse(2)
 			for (i = 1; i < M; ++i)
 			{
 				for (j = 1; j < N; ++j)
@@ -318,7 +324,7 @@ int main(int argc, char **argv)
 				}
 			}
 
-			#pragma omp single nowait
+			//#pragma omp single nowait
 			{
 				std::ostringstream oss;
 				oss << "f/RAA/errorGrid" << k << ".txt";
@@ -327,7 +333,7 @@ int main(int argc, char **argv)
 				fout.close();
 			}
 
-			#pragma omp single nowait
+			//#pragma omp single nowait
 			{
 				std::ostringstream oss;
 				oss << "f/err/errorGrid" << k << ".txt";
@@ -336,7 +342,7 @@ int main(int argc, char **argv)
 				fout.close();
 			}
 
-			#pragma omp single nowait
+			//#pragma omp single nowait
 			{
 				std::ostringstream oss;
 				oss << "f/Rerr/errorGrid" << k << ".txt";
@@ -371,7 +377,7 @@ int main(int argc, char **argv)
 
 				#endif
 
-				cout << "timeStep = " << (omp_get_wtime() - start) << endl;
+				cout << "timeStep = " << (MPI_Wtime() - start) << endl;
 			}
 		}
 		#endif // SHOWINFO
@@ -380,7 +386,7 @@ int main(int argc, char **argv)
 		//#pragma omp barrier
 		if (k % TracingPeriod == 0)
 		{
-			#pragma omp for schedule(static) collapse(2) reduction(+:norma2R)
+			//#pragma omp for schedule(static) collapse(2) reduction(+:norma2R)
 			for (i = 1; i < M; ++i)
 			{
 				for (j = 1; j < N; ++j)
@@ -389,7 +395,7 @@ int main(int argc, char **argv)
 				}
 			}
 
-			#pragma omp single
+			//#pragma omp single
 			{
 				foutR << norma2R << ";" << endl;
 				norma2R = 0;
@@ -405,19 +411,22 @@ int main(int argc, char **argv)
 		#endif // SHOWDELTAGRAPHIC
 		#endif // OR DEFINED
 
+		MPI_Barrier(vu);
 		//#pragma omp barrier
-
+		//cout << "10 with k =  " << k << endl;
 		if (deltaSqr < DELTA * DELTA)
+		{
 			break;
+		}
+		//cout << "11 with k =  " << k << endl;
 	}
 
 	//#ifdef SHOWCOUNT
 	cout << "stop k = " << k << endl;
 	cout << "time = " << (MPI_Wtime() - start) << endl;
 	//#endif // SHOWCOUT
-
 	#ifdef SHOWDELTAGRAPHIC
-	#pragma omp single nowait
+	//#pragma omp single nowait
 	{
 		deltaLog << deltaSqr << endl;
 		deltaLog.close();
@@ -469,7 +478,8 @@ int main(int argc, char **argv)
 		std::ostringstream oss;
 		oss << "f/final" << rank << ".txt";
 		ofstream fout(oss.str());
-		SaveResults(w, sizeX, sizeY, fout);
+		SaveResults(w, sizeY, sizeX, fout);
+		//fout << rank << endl;
 		fout.close();
 		#else
 		cout << endl << "result:" << endl;
@@ -477,6 +487,8 @@ int main(int argc, char **argv)
 		cout << endl;
 		#endif // RESULTINFILE
 	}
+
+	cout << "1 rankk = " << rank  << " sizeX = " << sizeX << endl;
 
 	//Освобождение памяти
 	for (int i = 0; i < sizeX; ++i)
@@ -490,27 +502,31 @@ int main(int argc, char **argv)
 		delete[] err[i];
 		delete[] rAGrid[i];
 		#endif // SHOWERRORGRAPHIC
-
 	}
+
 	delete[] w;
 	delete[] r;
 	delete[] a;
 	delete[] b;
 	delete[] F;
+
+	cout << "start free shared" << rank << " sizeX = " << sizeX << endl;
 	delete[] sharedWbyX;
 	delete[] sharedWbyY;
-
 
 	#ifdef SHOWERRORGRAPHIC
 	delete[] err;
 	delete[] rAGrid;
 	#endif // SHOWERRORGRAPHIC
+	
+	cout << "3 rankk = " << rank << endl;
+
 
 	MPI_Finalize();
 	return 0;
 }
 
-void BorderPointExchange(double **w, double *sharedWbyX, double* sharedWbyY, int sizeX, int sizeY, int coord[2], int rightNode, int leftNode, int downNode, int topNode, const MPI_Comm &vu)
+void BorderPointExchange(double **w, double *sharedWbyX, double* sharedWbyY, int sizeX, int sizeY, int (&coord)[2], int rightNode, int leftNode, int downNode, int topNode, const MPI_Comm &vu)
 {
 	MPI_Status status;
 
