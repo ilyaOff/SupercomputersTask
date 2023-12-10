@@ -9,7 +9,7 @@
 #include "MyMacroses.h"
 //#define WRITEFILE
 //#define WRITEFILER
-//#define SHOWINFO
+#define SHOWINFO
 #define RESULTINFILE
 //#define SHOWDELTAGRAPHIC
 #define SHOWCOUNT
@@ -77,7 +77,7 @@ int main(int argc, char **argv)
 	if (h2 > h1)
 		epsilon = h2;
 	epsilon = epsilon * epsilon;
-
+	epsilon = 0.01;
 	MPI_Comm vu;
 	int dims[2];
 	CreateGridCommunicator(numtasks, vu, dims);
@@ -112,9 +112,10 @@ int main(int argc, char **argv)
 	int sizeX = CalculateSize(M, dims[0], coord[0]);
 	int sizeY = CalculateSize(N, dims[1], coord[1]);
 
+	cout << "coord = " << dims[0] << ":" << dims[1] << endl;
 	cout << rank << " elements = (" << sizeX << "; " << sizeY << ")" << endl;
-	/*MPI_Finalize();
-	return 0;*/
+	//MPI_Finalize();
+	//return 0;
 
 	#ifdef  SHOWDELTAGRAPHIC
 	ofstream deltaLog("f/DeltaLog.txt");
@@ -168,9 +169,9 @@ int main(int argc, char **argv)
 		sharedWbyY[i] = 0;
 	}
 
-	int shiftX = coord[0] * GetCountElementInRow(M, dims[0]) - 1;
-	int shiftY = coord[1] * GetCountElementInRow(N, dims[1]) - 1;
-
+	int shiftX = coord[0] * GetCountElementInRow(M, dims[0]) -1;
+	int shiftY = coord[1] * GetCountElementInRow(N, dims[1]) -1;
+	cout << rank << " shift: " << shiftX << " " << shiftY << endl;
 	for (int i = 0; i < sizeX; ++i)
 	{
 		for (int j = 0; j < sizeY; ++j)
@@ -188,10 +189,10 @@ int main(int argc, char **argv)
 		}
 	}
 
-	int middleX = (M + 1) / 2 - shiftX;
+	/*int middleX = (M + 1) / 2 - shiftX;
 	int middleY = (N + 1) / 2 - shiftY;
 	if (middleX >= 0 && middleX < sizeX && middleY >= 0 && middleY < sizeY)
-		w[middleX][middleY] = 1;
+		w[middleX][middleY] = 1;*/
 
 	double norma2R = 0.0;
 	double tau = 0.0;
@@ -208,37 +209,43 @@ int main(int argc, char **argv)
 	//Вывод коэффициентов рассчёта
 	#ifdef SHOWINFO
 	{
-		ofstream fout("f/F.txt");
-		SaveResults(F, sizeX, sizeY, fout);
+		std::ostringstream oss;
+		oss << "f/F" << rank << ".txt";
+		ofstream fout(oss.str());
+		SaveResults(F, sizeY, sizeX, fout);
 		fout.close();
 	}
 	{
-		ofstream fout("f/A.txt");
-		SaveResults(a, sizeX, sizeY, fout);
+		std::ostringstream oss;
+		oss << "f/A" << rank << ".txt";
+		ofstream fout(oss.str());
+		SaveResults(a, sizeY, sizeX, fout);
 		fout.close();
 	}
 	{
-		ofstream fout("f/B.txt");
-		SaveResults(b, sizeX, sizeY, fout);
+		std::ostringstream oss;
+		oss << "f/B" << rank << ".txt";
+		ofstream fout(oss.str());
+		SaveResults(b, sizeY, sizeX, fout);
 		fout.close();
 	}
 	#endif
 
-	int Mfor = sizeX - 1;
-	int Nfor = sizeY - 1;
+	int Mfor = sizeX - 2;
+	int Nfor = sizeY - 2;
 	//Основной цикл
 	//#pragma omp parallel private(i, j, rA, tau)
 	for (;  k < KMAX; )
 	{
 		//cout << "1 with k =  " << k << endl;
 		//записать значения массива от соседей
-		BorderPointExchange(w, sharedWbyX, sharedWbyY, sizeX, sizeY, coord, rightNode, leftNode, downNode, topNode, vu);
+		//BorderPointExchange(w, sharedWbyX, sharedWbyY, sizeX, sizeY, coord, rightNode, leftNode, downNode, topNode, vu);
 		//cout << "2 with k =  " << k << endl;
 		//посчитать невязку r
 		//#pragma omp  for collapse(2) schedule(static)
-		for (i = 1; i < Mfor; ++i)
+		for (i = 2; i < Mfor; ++i)
 		{
-			for (j = 1; j < Nfor; ++j)
+			for (j = 2; j < Nfor; ++j)
 			{
 				MainFunctionParallel2(r[i][j], -F[i][j], w, i, j, Mfor, Nfor, a, b, h1, h2);
 			}
@@ -257,12 +264,12 @@ int main(int argc, char **argv)
 		//#pragma omp barrier
 		//cout << "4 with k =  " << k << endl;
 		//посчитать итерационный параметр
-		BorderPointExchange(r, sharedWbyX, sharedWbyY, sizeX, sizeY, coord, rightNode, leftNode, downNode, topNode, vu);
+		//BorderPointExchange(r, sharedWbyX, sharedWbyY, sizeX, sizeY, coord, rightNode, leftNode, downNode, topNode, vu);
 		//cout << "5 with k =  " << k << endl;
 		//#pragma omp for collapse(2) schedule(static) reduction(+:tauNumerator, tauDenominator)
-		for (i = 1; i < Mfor; ++i)
+		for (i = 2; i < Mfor; ++i)
 		{
-			for (j = 1; j < Nfor; ++j)
+			for (j = 2; j < Nfor; ++j)
 			{
 				MainFunctionParallel2(rA, 0, r, i, j, Mfor, Nfor, a, b, h1, h2);
 
@@ -292,9 +299,9 @@ int main(int argc, char **argv)
 		//посчитать w(k+1)
 		//посчитать точность
 		//#pragma omp for schedule(static) collapse(2) nowait reduction(+:deltaSqr)
-		for (i = 1; i < Mfor; ++i)
+		for (i = 2; i < Mfor; ++i)
 		{
-			for (j = 1; j < Nfor; ++j)
+			for (j = 2; j < Nfor; ++j)
 			{
 				double step = tau * r[i][j];
 				w[i][j] = w[i][j] - step;
@@ -699,7 +706,7 @@ int CalculateSize(int lengthBigGrid, int maxElemets, int gridCoordinate)
 {
 	int size = GetCountElementInRow(lengthBigGrid, maxElemets);
 	if (gridCoordinate == maxElemets - 1)
-		size = (M + 1) - size * gridCoordinate;
+		size = (lengthBigGrid + 1) - size * gridCoordinate;
 	size += 2;//Для обмена с соседними узлами на сетке
 	return size;
 }
