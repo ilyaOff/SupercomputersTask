@@ -15,6 +15,8 @@
 #define SHOWCOUNT
 //#define SHOWERRORGRAPHIC
 
+#define SENDW 10
+
 using namespace std;
 
 //Параметры области
@@ -80,11 +82,11 @@ int main(int argc, char **argv)
 	int dims[2];
 	CreateGridCommunicator(numtasks, vu, dims);
 
-	int upNode, downNode, leftNode, rightNode;
-	MPI_Cart_shift(vu, 0, 1, &upNode, &downNode);
+	int topNode, downNode, leftNode, rightNode;
+	MPI_Cart_shift(vu, 0, 1, &topNode, &downNode);
 	MPI_Cart_shift(vu, 1, 1, &leftNode, &rightNode);
 
-	MPI_Status status;
+	/*MPI_Status status;
 	int message = -1;
 	int messageNode = -1;
 	if (rank % 2 == 0)
@@ -98,11 +100,11 @@ int main(int argc, char **argv)
 		messageNode = leftNode;
 		MPI_Recv(&message, 1, MPI_INT, messageNode, 9, vu, &status);
 		MPI_Send(&rank, 1, MPI_INT, messageNode, 9, vu);
-	}
+	}*/
 
 	cout << "HELLO MPI. id process = " << rank << " from " << numtasks << " processes" << endl;
-	cout << rank << " I get message " << message << " from " << messageNode << endl;
-	cout << rank << " UP " << upNode << " down " << downNode << " left " << leftNode << " right " << rightNode << endl;
+	//cout << rank << " I get message " << message << " from " << messageNode << endl;
+	cout << rank << " UP " << topNode << " down " << downNode << " left " << leftNode << " right " << rightNode << endl;
 
 	int coord[2];
 	MPI_Cart_coords(vu, rank, 2, coord);
@@ -111,13 +113,12 @@ int main(int argc, char **argv)
 	int sizeY = CalculateSize(N, dims[1], coord[1]);
 
 	cout << rank << " elements = (" << sizeX << "; " << sizeY << ")" << endl;
-	MPI_Finalize();
-	return 0;
+	/*MPI_Finalize();
+	return 0;*/
 
 	#ifdef  SHOWDELTAGRAPHIC
 	ofstream deltaLog("f/DeltaLog.txt");
 	#endif //  SHOWDELTAGRAPHIC
-
 
 
 	//Выделение памяти под массивы
@@ -126,8 +127,8 @@ int main(int argc, char **argv)
 	double **a = new double *[sizeX];
 	double **b = new double *[sizeX];
 	double **F = new double *[sizeX];
-	double *sharedVerticalW = new double[sizeX];
-	double *sharedHorizontalW = new double[sizeY];
+	double *sharedWbyX = new double[sizeX];
+	double *sharedWbyY = new double[sizeY];
 
 	for (int i = 0; i < sizeX; ++i)
 	{
@@ -154,17 +155,17 @@ int main(int argc, char **argv)
 	//omp_set_dynamic(1);
 
 	cout << "start" << endl;
-	double start = omp_get_wtime();
+	double start = MPI_Wtime();
 
 
 	for (int i = 0; i < sizeX; ++i)
 	{
-		sharedVerticalW[i] = 0;
+		sharedWbyX[i] = 0;
 	}
 
 	for (int i = 0; i < sizeY; ++i)
 	{
-		sharedHorizontalW[i] = 0;
+		sharedWbyY[i] = 0;
 	}
 
 	int shiftX = coord[0] * GetCountElementInRow(M, dims[0]) - 1;
@@ -189,14 +190,15 @@ int main(int argc, char **argv)
 
 	int middleX = (M + 1) / 2 - shiftX;
 	int middleY = (N + 1) / 2 - shiftY;
-	if(middleX >= 0 && middleX < sizeX && middleY >= 0 && middleY < sizeY)
+	if (middleX >= 0 && middleX < sizeX && middleY >= 0 && middleY < sizeY)
 		w[middleX][middleY] = 1;
 
 	double norma2R = 0.0;
 	double tau = 0.0;
 	double rA = 0.0;
 	double tauNumerator = 0.0, tauDenominator = 0.0;
-	double deltaSqr = 0.0;
+	double tau4Send[2], tau4Recive[2];
+	double deltaSqr = 0.0, deltaSqr4Recive = 0.0;
 	int k = 1;
 	int i, j;
 
@@ -228,6 +230,9 @@ int main(int argc, char **argv)
 	#pragma omp parallel private(i, j, rA, tau)
 	for (; k < KMAX; )
 	{
+		//записать значения массива от соседей
+		BorderPointExchange(w, sharedWbyX, sharedWbyY, sizeX, sizeY, coord, rightNode, leftNode, downNode, topNode, vu);
+
 		//посчитать невязку r
 		//#pragma omp  for collapse(2) schedule(static)
 		for (i = 1; i < Mfor; ++i)
@@ -250,6 +255,8 @@ int main(int argc, char **argv)
 		//#pragma omp barrier
 
 		//посчитать итерационный параметр
+		BorderPointExchange(r, sharedWbyX, sharedWbyY, sizeX, sizeY, coord, rightNode, leftNode, downNode, topNode, vu);
+
 		//#pragma omp for collapse(2) schedule(static) reduction(+:tauNumerator, tauDenominator)
 		for (i = 1; i < Mfor; ++i)
 		{
@@ -268,6 +275,11 @@ int main(int argc, char **argv)
 
 		//#pragma omp single
 		{
+			tau4Send[0] = tauNumerator;
+			tau4Send[1] = tauDenominator;
+			MPI_Allreduce(tau4Send, tau4Recive, 2, MPI_DOUBLE, MPI_SUM, vu);
+			tauNumerator = tau4Recive[0];
+			tauDenominator = tau4Recive[1];
 			/*if (tauDenominator == 0 || isnan(tauDenominator))
 				tau = 0;
 			else*/
@@ -286,6 +298,12 @@ int main(int argc, char **argv)
 
 				deltaSqr += step * step;
 			}
+		}
+
+		//#pragma omp single
+		{
+			MPI_Allreduce(&deltaSqr, &deltaSqr4Recive, 1, MPI_DOUBLE, MPI_SUM, vu);
+			deltaSqr = deltaSqr4Recive;
 		}
 
 		#ifdef SHOWERRORGRAPHIC
@@ -395,7 +413,7 @@ int main(int argc, char **argv)
 
 	//#ifdef SHOWCOUNT
 	cout << "stop k = " << k << endl;
-	cout << "time = " << (omp_get_wtime() - start) << endl;
+	cout << "time = " << (MPI_Wtime() - start) << endl;
 	//#endif // SHOWCOUT
 
 	#ifdef SHOWDELTAGRAPHIC
@@ -479,8 +497,8 @@ int main(int argc, char **argv)
 	delete[] a;
 	delete[] b;
 	delete[] F;
-	delete[] sharedVerticalW;
-	delete[] sharedHorizontalW;
+	delete[] sharedWbyX;
+	delete[] sharedWbyY;
 
 
 	#ifdef SHOWERRORGRAPHIC
@@ -488,7 +506,135 @@ int main(int argc, char **argv)
 	delete[] rAGrid;
 	#endif // SHOWERRORGRAPHIC
 
+	MPI_Finalize();
 	return 0;
+}
+
+void BorderPointExchange(double **w, double *sharedWbyX, double* sharedWbyY, int sizeX, int sizeY, int coord[2], int rightNode, int leftNode, int downNode, int topNode, const MPI_Comm &vu)
+{
+	MPI_Status status;
+
+	if (coord[1] % 2 == 0)
+	{
+		if (downNode != -1)
+		{
+			for (int i = 0; i < sizeX; ++i)
+			{
+				sharedWbyX[i] = w[i][1];
+			}
+			MPI_Send(sharedWbyX, sizeX, MPI_DOUBLE, downNode, SENDW, vu);
+			MPI_Recv(sharedWbyX, sizeX, MPI_DOUBLE, downNode, SENDW, vu, &status);
+			for (int i = 0; i < sizeX; ++i)
+			{
+				w[i][0] = sharedWbyX[i];
+			}
+		}
+
+		if (topNode != -1)
+		{
+			for (int i = 0; i < sizeX; ++i)
+			{
+				sharedWbyX[i] = w[i][sizeY - 2];
+			}
+			MPI_Send(sharedWbyX, sizeX, MPI_DOUBLE, topNode, SENDW, vu);
+			MPI_Recv(sharedWbyX, sizeX, MPI_DOUBLE, topNode, SENDW, vu, &status);
+			for (int i = 0; i < sizeX; ++i)
+			{
+				w[i][sizeY - 1] = sharedWbyX[i];
+			}
+		}
+	}
+	else
+	{
+		if (topNode != -1)
+		{
+			MPI_Recv(sharedWbyX, sizeX, MPI_DOUBLE, topNode, SENDW, vu, &status);
+			for (int i = 0; i < sizeX; ++i)
+			{
+				w[i][sizeY - 1] = sharedWbyX[i];
+			}
+			for (int i = 0; i < sizeX; ++i)
+			{
+				sharedWbyX[i] = w[i][sizeY - 2];
+			}
+			MPI_Send(sharedWbyX, sizeX, MPI_DOUBLE, topNode, SENDW, vu);
+		}
+
+		if (downNode != -1)
+		{
+			MPI_Recv(sharedWbyX, sizeX, MPI_DOUBLE, downNode, SENDW, vu, &status);
+			for (int i = 0; i < sizeX; ++i)
+			{
+				w[i][0] = sharedWbyX[i];
+			}
+			for (int i = 0; i < sizeX; ++i)
+			{
+				sharedWbyX[i] = w[i][1];
+			}
+			MPI_Send(sharedWbyX, sizeX, MPI_DOUBLE, downNode, SENDW, vu);
+		}
+	}
+
+	if (coord[0] % 2 == 0)
+	{
+		if (rightNode != -1)
+		{
+			for (int j = 0; j < sizeY; ++j)
+			{
+				sharedWbyY[j] = w[sizeX - 2][j];
+			}
+			MPI_Send(sharedWbyX, sizeY, MPI_DOUBLE, rightNode, SENDW, vu);
+			MPI_Recv(sharedWbyX, sizeY, MPI_DOUBLE, rightNode, SENDW, vu, &status);
+			for (int j = 0; j < sizeY; ++j)
+			{
+				w[sizeX - 1][j] = sharedWbyX[j];
+			}
+		}
+
+		if (leftNode != -1)
+		{
+			for (int j = 0; j < sizeY; ++j)
+			{
+				sharedWbyY[j] = w[1][j];
+			}
+			MPI_Send(sharedWbyX, sizeY, MPI_DOUBLE, leftNode, SENDW, vu);
+			MPI_Recv(sharedWbyX, sizeY, MPI_DOUBLE, leftNode, SENDW, vu, &status);
+			for (int j = 0; j < sizeY; ++j)
+			{
+				w[0][j] = sharedWbyX[j];
+			}
+		}
+	}
+	else
+	{
+		if (leftNode != -1)
+		{
+			MPI_Recv(sharedWbyX, sizeY, MPI_DOUBLE, leftNode, SENDW, vu, &status);
+			for (int j = 0; j < sizeY; ++j)
+			{
+				w[0][j] = sharedWbyX[j];
+			}
+			for (int j = 0; j < sizeY; ++j)
+			{
+				sharedWbyY[j] = w[1][j];
+			}
+			MPI_Send(sharedWbyX, sizeY, MPI_DOUBLE, leftNode, SENDW, vu);
+		}
+
+		if (rightNode != -1)
+		{
+			MPI_Recv(sharedWbyX, sizeY, MPI_DOUBLE, rightNode, SENDW, vu, &status);
+			for (int j = 0; j < sizeY; ++j)
+			{
+				w[sizeX - 1][j] = sharedWbyX[j];
+			}
+			for (int j = 0; j < sizeY; ++j)
+			{
+				sharedWbyY[j] = w[sizeX - 2][j];
+			}
+			MPI_Send(sharedWbyX, sizeY, MPI_DOUBLE, rightNode, SENDW, vu);
+		}
+	}
 }
 
 void ReadParameters(int argc, char **argv)
