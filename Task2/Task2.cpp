@@ -2,7 +2,7 @@
 #include <string> 
 #include <sstream>
 #include <fstream>
-#include <omp.h>
+//#include <omp.h>
 #include <mpi.h>
 #include "Point.h"
 #include "Task2.h"
@@ -169,8 +169,8 @@ int main(int argc, char **argv)
 		sharedWbyY[i] = 0;
 	}
 
-	int shiftX = coord[0] * GetCountElementInRow(M, dims[0]) -1;
-	int shiftY = coord[1] * GetCountElementInRow(N, dims[1]) -1;
+	int shiftX = coord[0] * GetCountElementInRow(M, dims[0]) ;
+	int shiftY = coord[1] * GetCountElementInRow(N, dims[1]) ;
 	cout << rank << " shift: " << shiftX << " " << shiftY << endl;
 	for (int i = 0; i < sizeX; ++i)
 	{
@@ -231,21 +231,23 @@ int main(int argc, char **argv)
 	}
 	#endif
 
-	int Mfor = sizeX - 2;
-	int Nfor = sizeY - 2;
+	int Mfor = sizeX - 1;
+	int Nfor = sizeY - 1;
+	int startI = 1;
+	int startJ = 1;
 	//Основной цикл
 	//#pragma omp parallel private(i, j, rA, tau)
 	for (;  k < KMAX; )
 	{
 		//cout << "1 with k =  " << k << endl;
 		//записать значения массива от соседей
-		//BorderPointExchange(w, sharedWbyX, sharedWbyY, sizeX, sizeY, coord, rightNode, leftNode, downNode, topNode, vu);
+		BorderPointExchange(w, sharedWbyX, sharedWbyY, sizeX, sizeY, coord, rightNode, leftNode, downNode, topNode, vu);
 		//cout << "2 with k =  " << k << endl;
 		//посчитать невязку r
 		//#pragma omp  for collapse(2) schedule(static)
-		for (i = 2; i < Mfor; ++i)
+		for (i = startI; i < Mfor; ++i)
 		{
-			for (j = 2; j < Nfor; ++j)
+			for (j = startJ; j < Nfor; ++j)
 			{
 				MainFunctionParallel2(r[i][j], -F[i][j], w, i, j, Mfor, Nfor, a, b, h1, h2);
 			}
@@ -264,12 +266,12 @@ int main(int argc, char **argv)
 		//#pragma omp barrier
 		//cout << "4 with k =  " << k << endl;
 		//посчитать итерационный параметр
-		//BorderPointExchange(r, sharedWbyX, sharedWbyY, sizeX, sizeY, coord, rightNode, leftNode, downNode, topNode, vu);
+		BorderPointExchange(r, sharedWbyX, sharedWbyY, sizeX, sizeY, coord, rightNode, leftNode, downNode, topNode, vu);
 		//cout << "5 with k =  " << k << endl;
 		//#pragma omp for collapse(2) schedule(static) reduction(+:tauNumerator, tauDenominator)
-		for (i = 2; i < Mfor; ++i)
+		for (i = startI; i < Mfor; ++i)
 		{
-			for (j = 2; j < Nfor; ++j)
+			for (j = startJ; j < Nfor; ++j)
 			{
 				MainFunctionParallel2(rA, 0, r, i, j, Mfor, Nfor, a, b, h1, h2);
 
@@ -299,9 +301,9 @@ int main(int argc, char **argv)
 		//посчитать w(k+1)
 		//посчитать точность
 		//#pragma omp for schedule(static) collapse(2) nowait reduction(+:deltaSqr)
-		for (i = 2; i < Mfor; ++i)
+		for (i = startI; i < Mfor; ++i)
 		{
-			for (j = 2; j < Nfor; ++j)
+			for (j = startJ; j < Nfor; ++j)
 			{
 				double step = tau * r[i][j];
 				w[i][j] = w[i][j] - step;
@@ -481,7 +483,9 @@ int main(int argc, char **argv)
 
 	//Вывод результата в файл
 	{
+		cout << rank << " start write file" << endl;
 		#ifdef RESULTINFILE
+
 		std::ostringstream oss;
 		oss << "f/final" << rank << ".txt";
 		ofstream fout(oss.str());
@@ -493,8 +497,10 @@ int main(int argc, char **argv)
 		//SaveResults(w, sizeX, sizeY);
 		cout << endl;
 		#endif // RESULTINFILE
+		cout << rank << " end write file" << endl;
 	}
 
+	MPI_Barrier(vu);
 	cout << "1 rankk = " << rank  << " sizeX = " << sizeX << endl;
 
 	//Освобождение памяти
@@ -619,6 +625,7 @@ void BorderPointExchange(double **w, double *sharedWbyX, double* sharedWbyY, int
 
 		if (leftNode != -1)
 		{
+			//cout << "I am" << coord[0] << ":" << coord[1] << endl;
 			for (int j = 0; j < sizeY; ++j)
 			{
 				sharedWbyY[j] = w[1][j];
@@ -644,7 +651,7 @@ void BorderPointExchange(double **w, double *sharedWbyX, double* sharedWbyY, int
 			{
 				sharedWbyY[j] = w[1][j];
 			}
-			MPI_Send(sharedWbyX, sizeY, MPI_DOUBLE, leftNode, SENDW, vu);
+			MPI_Send(sharedWbyY, sizeY, MPI_DOUBLE, leftNode, SENDW, vu);
 		}
 
 		if (rightNode != -1)
@@ -702,7 +709,7 @@ void CreateGridCommunicator(int numtasks, MPI_Comm &vu, int *dims)
 
 int GetCountElementInRow(int lengthBigGrid, int maxElemets)
 {
-	return (lengthBigGrid + 1) / maxElemets;
+	return (lengthBigGrid ) / maxElemets;
 }
 
 int CalculateSize(int lengthBigGrid, int maxElemets, int gridCoordinate)
@@ -710,7 +717,7 @@ int CalculateSize(int lengthBigGrid, int maxElemets, int gridCoordinate)
 	int size = GetCountElementInRow(lengthBigGrid, maxElemets);
 	if (gridCoordinate == maxElemets - 1)
 		size = (lengthBigGrid + 1) - size * gridCoordinate;
-	size += 2;//Для обмена с соседними узлами на сетке
+	//size += 2;//Для обмена с соседними узлами на сетке
 	return size;
 }
 
