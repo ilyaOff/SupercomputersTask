@@ -169,8 +169,16 @@ int main(int argc, char **argv)
 		sharedWbyY[i] = 0;
 	}
 
-	int shiftX = coord[0] * GetCountElementInRow(M, dims[0]) ;
-	int shiftY = coord[1] * GetCountElementInRow(N, dims[1]) ;
+	
+
+	
+
+	int shiftX = coord[0] * GetCountElementInRow(M, dims[0]);
+	//if (coord[0] == 0)
+		shiftX -= 1;
+	int shiftY = coord[1] * GetCountElementInRow(N, dims[1]);
+	//if (coord[1] == 0)
+		shiftY -= 1;
 	cout << rank << " shift: " << shiftX << " " << shiftY << endl;
 	for (int i = 0; i < sizeX; ++i)
 	{
@@ -232,9 +240,18 @@ int main(int argc, char **argv)
 	#endif
 
 	int Mfor = sizeX - 1;
+	if (coord[0] == dims[0] - 1)
+		Mfor -= 1;
 	int Nfor = sizeY - 1;
+	if (coord[1] == dims[1] - 1)
+		Nfor -= 1;
 	int startI = 1;
+	if (coord[0] == 0)
+		startI = 2;
+
 	int startJ = 1;
+	if (coord[1] == 0)
+		startJ = 2;
 	//Основной цикл
 	//#pragma omp parallel private(i, j, rA, tau)
 	for (;  k < KMAX; )
@@ -717,7 +734,7 @@ int CalculateSize(int lengthBigGrid, int maxElemets, int gridCoordinate)
 	int size = GetCountElementInRow(lengthBigGrid, maxElemets);
 	if (gridCoordinate == maxElemets - 1)
 		size = (lengthBigGrid + 1) - size * gridCoordinate;
-	//size += 2;//Для обмена с соседними узлами на сетке
+	size += 2;//Для обмена с соседними узлами на сетке
 	return size;
 }
 
