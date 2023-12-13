@@ -205,27 +205,11 @@ int main(int argc, char **argv)
 	#endif
 	//Вывод коэффициентов рассчёта
 	#ifdef SHOWINFO
-	{
-		std::ostringstream oss;
-		oss << "f/F" << rank << ".txt";
-		ofstream fout(oss.str());
-		SaveResults(F, sizeY, sizeX, fout);
-		fout.close();
-	}
-	{
-		std::ostringstream oss;
-		oss << "f/A" << rank << ".txt";
-		ofstream fout(oss.str());
-		SaveResults(a, sizeY, sizeX, fout);
-		fout.close();
-	}
-	{
-		std::ostringstream oss;
-		oss << "f/B" << rank << ".txt";
-		ofstream fout(oss.str());
-		SaveResults(b, sizeY, sizeX, fout);
-		fout.close();
-	}
+
+	Write2File("f/F", rank, F, sizeX, sizeY);
+	Write2File("f/A", rank, a, sizeX, sizeY);
+	Write2File("f/B", rank, b, sizeX, sizeY);
+
 	#endif
 
 	int Mfor = sizeX - 1;
@@ -341,29 +325,15 @@ int main(int argc, char **argv)
 
 			//#pragma omp single nowait
 			{
-				std::ostringstream oss;
-				oss << "f/RAA/errorGrid" << k << ".txt";
-				ofstream fout(oss.str());
-				SaveResults(rAGrid, sizeX, sizeY, fout);
-				fout.close();
+				Write2FileWithStep("f/RAA/errorGrid", rank, k, rAGrid, sizeX, sizeY);
 			}
-
 			//#pragma omp single nowait
 			{
-				std::ostringstream oss;
-				oss << "f/err/errorGrid" << k << ".txt";
-				ofstream fout(oss.str());
-				SaveResults(err, sizeX, sizeY, fout);
-				fout.close();
+				Write2FileWithStep("f/err/errorGrid", rank, k, err, sizeX, sizeY);
 			}
-
 			//#pragma omp single nowait
 			{
-				std::ostringstream oss;
-				oss << "f/Rerr/errorGrid" << k << ".txt";
-				ofstream fout(oss.str());
-				SaveResults(r, sizeX, sizeY, fout);
-				fout.close();
+				Write2FileWithStep("f/Rerr/errorGrid", rank, k, r, sizeX, sizeY);
 			}
 		}
 		#endif // SHOWERRORGRAPHIC
@@ -384,12 +354,7 @@ int main(int argc, char **argv)
 
 
 				#ifdef WRITEFILE
-				std::ostringstream oss;
-				oss << "f/result" << k << ".txt";
-				ofstream fout(oss.str());
-				SaveResults(w, sizeX, sizeY, fout);
-				fout.close();
-
+				Write2FileWithStep("f/result", rank, k, w, sizeX, sizeY);
 				#endif
 
 				cout << "timeStep = " << (MPI_Wtime() - start) << endl;
@@ -463,27 +428,11 @@ int main(int argc, char **argv)
 	#endif
 
 	#ifdef SHOWERRORGRAPHIC
-	{
-		std::ostringstream oss;
-		oss << "f/RAA/errorGrid" << k << ".txt";
-		ofstream fout(oss.str());
-		SaveResults(rAGrid, sizeX, sizeY, fout);
-		fout.close();
-	}
-	{
-		std::ostringstream oss;
-		oss << "f/Rerr/errorGrid" << k << ".txt";
-		ofstream fout(oss.str());
-		SaveResults(r, sizeX, sizeY, fout);
-		fout.close();
-	}
-	{
-		std::ostringstream oss;
-		oss << "f/err/errorGrid" << k << ".txt";
-		ofstream fout(oss.str());
-		SaveResults(err, sizeX, sizeY, fout);
-		fout.close();
-	}
+	
+	Write2FileWithStep("f/RAA/errorGrid", rank, k, rAGrid, sizeX, sizeY);
+	Write2FileWithStep("f/Rerr/errorGrid", rank, k, r, sizeX, sizeY);
+	Write2FileWithStep("f/err/errorGrid", rank, k, err, sizeX, sizeY);
+	
 	#endif // SHOWERRORGRAPHIC
 
 	//Вывод результата в файл
@@ -491,12 +440,8 @@ int main(int argc, char **argv)
 		cout << rank << " start write file" << endl;
 		#ifdef RESULTINFILE
 
-		std::ostringstream oss;
-		oss << "f/final" << rank << ".txt";
-		ofstream fout(oss.str());
-		SaveResults(w, sizeY, sizeX, fout);
-		//fout << rank << endl;
-		fout.close();
+		Write2File("f/final", rank, w, sizeX, sizeY);
+
 		#else
 		cout << endl << "result:" << endl;
 		//SaveResults(w, sizeX, sizeY);
