@@ -77,7 +77,6 @@ int main(int argc, char **argv)
 	if (h2 > h1)
 		epsilon = h2;
 	epsilon = epsilon * epsilon;
-	epsilon = 0.01;
 	MPI_Comm vu;
 	int dims[2];
 	CreateGridCommunicator(numtasks, vu, dims);
