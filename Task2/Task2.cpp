@@ -9,7 +9,7 @@
 #include "MyMacroses.h"
 //#define WRITEFILE
 //#define WRITEFILER
-//#define SHOWINFO
+#define SHOWINFO
 #define RESULTINFILE
 //#define SHOWDELTAGRAPHIC
 #define SHOWCOUNT
@@ -174,11 +174,11 @@ int main(int argc, char **argv)
 	
 
 	int shiftX = coord[0] * GetCountElementInRow(M, dims[0]);
-	//if (coord[0] == 0)
-		//shiftX -= 1;
+	if (coord[0] != 0)
+		shiftX -= 1;
 	int shiftY = coord[1] * GetCountElementInRow(N, dims[1]);
-	//if (coord[1] == 0)
-		//shiftY -= 1;
+	if (coord[1] != 0)
+		shiftY -= 1;
 	cout << rank << " shift: " << shiftX << " " << shiftY << endl;
 	for (int i = 0; i < sizeX; ++i)
 	{
@@ -240,11 +240,11 @@ int main(int argc, char **argv)
 	#endif
 
 	int Mfor = sizeX - 1;
-	if (coord[0] == dims[0] - 1)
-		Mfor -= 1;
+	/*if (coord[0] == dims[0] - 1)
+		Mfor -= 1;*/
 	int Nfor = sizeY - 1;
-	if (coord[1] == dims[1] - 1)
-		Nfor -= 1;
+	/*if (coord[1] == dims[1] - 1)
+		Nfor -= 1;*/
 	int startI = 1;
 	/*if (coord[0] == 0)
 		startI = 2;*/
