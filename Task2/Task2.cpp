@@ -77,6 +77,7 @@ int main(int argc, char **argv)
 	if (h2 > h1)
 		epsilon = h2;
 	epsilon = epsilon * epsilon;
+
 	MPI_Comm vu;
 	int dims[2];
 	CreateGridCommunicator(numtasks, vu, dims);
@@ -85,41 +86,19 @@ int main(int argc, char **argv)
 	MPI_Cart_shift(vu, 1, -1, &topNode, &downNode);
 	MPI_Cart_shift(vu, 0, 1, &leftNode, &rightNode);
 
-	/*MPI_Status status;
-	int message = -1;
-	int messageNode = -1;
-	if (rank % 2 == 0)
-	{
-		messageNode = rightNode;
-		MPI_Send(&rank, 1, MPI_INT, messageNode, 9, vu);
-		MPI_Recv(&message, 1, MPI_INT, messageNode, 9, vu, &status);
-	}
-	else
-	{
-		messageNode = leftNode;
-		MPI_Recv(&message, 1, MPI_INT, messageNode, 9, vu, &status);
-		MPI_Send(&rank, 1, MPI_INT, messageNode, 9, vu);
-	}*/
-
-	cout << "HELLO MPI. id process = " << rank << " from " << numtasks << " processes" << endl;
-	//cout << rank << " I get message " << message << " from " << messageNode << endl;
-	cout << rank << " UP " << topNode << " down " << downNode << " left " << leftNode << " right " << rightNode << endl;
-
 	int coord[2];
 	MPI_Cart_coords(vu, rank, 2, coord);
 
 	int sizeX = CalculateSize(M, dims[0], coord[0]);
 	int sizeY = CalculateSize(N, dims[1], coord[1]);
 
+	cout << rank << " UP " << topNode << " down " << downNode << " left " << leftNode << " right " << rightNode << endl;
 	cout << rank << " coord = " << coord[0] << ":" << coord[1] << endl;
 	cout << rank << " elements = (" << sizeX << "; " << sizeY << ")" << endl;
-	//MPI_Finalize();
-	//return 0;
 
 	#ifdef  SHOWDELTAGRAPHIC
 	ofstream deltaLog("f/DeltaLog.txt");
 	#endif //  SHOWDELTAGRAPHIC
-
 
 	//Выделение памяти под массивы
 	double **w = new double *[sizeX];
@@ -155,7 +134,6 @@ int main(int argc, char **argv)
 
 	cout << "start" << endl;
 	double start = MPI_Wtime();
-
 
 	for (int i = 0; i < sizeX; ++i)
 	{
@@ -213,26 +191,16 @@ int main(int argc, char **argv)
 	#endif
 
 	int Mfor = sizeX - 1;
-	/*if (coord[0] == dims[0] - 1)
-		Mfor -= 1;*/
 	int Nfor = sizeY - 1;
-	/*if (coord[1] == dims[1] - 1)
-		Nfor -= 1;*/
 	int startI = 1;
-	/*if (coord[0] == 0)
-		startI = 2;*/
-
 	int startJ = 1;
-	/*if (coord[1] == 0)
-		startJ = 2;*/
+
 	//Основной цикл
 	//#pragma omp parallel private(i, j, rA, tau)
-	for (;  k < KMAX; )
+	for (; k < KMAX; )
 	{
-		//cout << "1 with k =  " << k << endl;
 		//записать значения массива от соседей
 		BorderPointExchange(w, sharedWbyX, sizeX, sizeY, coord, rightNode, leftNode, downNode, topNode, vu);
-		//cout << "2 with k =  " << k << endl;
 		//посчитать невязку r
 		//#pragma omp  for collapse(2) schedule(static)
 		for (i = startI; i < Mfor; ++i)
@@ -243,7 +211,6 @@ int main(int argc, char **argv)
 			}
 		}
 
-		//cout << "3 with k =  " << k << endl;
 		//#pragma omp single nowait
 		{
 			tauNumerator = 0.0, tauDenominator = 0.0;
@@ -254,10 +221,9 @@ int main(int argc, char **argv)
 			#endif // WRITEFILER
 		}
 		//#pragma omp barrier
-		//cout << "4 with k =  " << k << endl;
+
 		//посчитать итерационный параметр
 		BorderPointExchange(r, sharedWbyX, sizeX, sizeY, coord, rightNode, leftNode, downNode, topNode, vu);
-		//cout << "5 with k =  " << k << endl;
 		//#pragma omp for collapse(2) schedule(static) reduction(+:tauNumerator, tauDenominator)
 		for (i = startI; i < Mfor; ++i)
 		{
@@ -274,7 +240,6 @@ int main(int argc, char **argv)
 			}
 		}
 
-		//cout << "6 with k =  " << k << endl;
 		//#pragma omp single
 		{
 			tau4Send[0] = tauNumerator;
@@ -287,7 +252,7 @@ int main(int argc, char **argv)
 			else*/
 			tau = tauNumerator / tauDenominator;
 		}
-		//cout << "7 with k =  " << k << endl;
+
 		//посчитать w(k+1)
 		//посчитать точность
 		//#pragma omp for schedule(static) collapse(2) nowait reduction(+:deltaSqr)
@@ -301,16 +266,13 @@ int main(int argc, char **argv)
 				deltaSqr += step * step;
 			}
 		}
-		//cout << "8 with k =  " << k << endl;
 
-		//cout << "delta before" << deltaSqr << endl;
 		//#pragma omp single
 		{
 			MPI_Allreduce(&deltaSqr, &deltaSqr4Recive, 1, MPI_DOUBLE, MPI_SUM, vu);
 			deltaSqr = deltaSqr4Recive;
 		}
-		//cout << "delta after " << deltaSqr << endl;
-		//cout << "9 with k =  " << k << endl;
+
 		#ifdef SHOWERRORGRAPHIC
 		if (k % TracingPeriod == 0)
 		{
@@ -352,7 +314,6 @@ int main(int argc, char **argv)
 				cout << " tauDenominator = " << tauDenominator;*/
 				cout << endl;
 
-
 				#ifdef WRITEFILE
 				Write2FileWithStep("f/result", rank, k, w, sizeX, sizeY);
 				#endif
@@ -380,7 +341,7 @@ int main(int argc, char **argv)
 				foutR << norma2R << ";" << endl;
 				norma2R = 0;
 			}
-		}
+			}
 		#endif// WRITEFILER
 
 		#ifdef SHOWDELTAGRAPHIC
@@ -392,13 +353,11 @@ int main(int argc, char **argv)
 		#endif // OR DEFINED
 
 		//#pragma omp barrier
-		//cout << "10 with k =  " << k << endl;
 		if (deltaSqr < DELTA * DELTA)
 		{
 			break;
 		}
-		//cout << "11 with k =  " << k << endl;
-	}
+		}
 
 	//#ifdef SHOWCOUNT
 	cout << "stop k = " << k << endl;
@@ -428,11 +387,11 @@ int main(int argc, char **argv)
 	#endif
 
 	#ifdef SHOWERRORGRAPHIC
-	
+
 	Write2FileWithStep("f/RAA/errorGrid", rank, k, rAGrid, sizeX, sizeY);
 	Write2FileWithStep("f/Rerr/errorGrid", rank, k, r, sizeX, sizeY);
 	Write2FileWithStep("f/err/errorGrid", rank, k, err, sizeX, sizeY);
-	
+
 	#endif // SHOWERRORGRAPHIC
 
 	//Вывод результата в файл
@@ -449,9 +408,6 @@ int main(int argc, char **argv)
 		#endif // RESULTINFILE
 		cout << rank << " end write file" << endl;
 	}
-
-	MPI_Barrier(vu);
-	cout << "1 rankk = " << rank  << " sizeX = " << sizeX << endl;
 
 	//Освобождение памяти
 	for (int i = 0; i < sizeX; ++i)
@@ -473,22 +429,18 @@ int main(int argc, char **argv)
 	delete[] b;
 	delete[] F;
 
-	cout << "start free shared" << rank << " sizeX = " << sizeX << endl;
 	delete[] sharedWbyX;
 
 	#ifdef SHOWERRORGRAPHIC
 	delete[] err;
 	delete[] rAGrid;
 	#endif // SHOWERRORGRAPHIC
-	
-	cout << "3 rankk = " << rank << endl;
-
 
 	MPI_Finalize();
 	return 0;
-}
+	}
 
-void BorderPointExchange(double **w, double *sharedWbyX, int sizeX, int sizeY, int (&coord)[2], int rightNode, int leftNode, int downNode, int topNode, const MPI_Comm &vu)
+void BorderPointExchange(double **w, double *sharedWbyX, int sizeX, int sizeY, int(&coord)[2], int rightNode, int leftNode, int downNode, int topNode, const MPI_Comm &vu)
 {
 	MPI_Status status;
 
@@ -522,7 +474,7 @@ void BorderPointExchange(double **w, double *sharedWbyX, int sizeX, int sizeY, i
 			{
 				w[i][sizeY - 1] = sharedWbyX[i];
 			}
-		}
+}
 	}
 	else
 	{
@@ -575,7 +527,7 @@ void BorderPointExchange(double **w, double *sharedWbyX, int sizeX, int sizeY, i
 	{
 		if (leftNode != -1)
 		{
-			MPI_Recv(w[0], sizeY, MPI_DOUBLE, leftNode, SENDW, vu, &status);			
+			MPI_Recv(w[0], sizeY, MPI_DOUBLE, leftNode, SENDW, vu, &status);
 			MPI_Send(w[1], sizeY, MPI_DOUBLE, leftNode, SENDW, vu);
 		}
 
@@ -585,7 +537,7 @@ void BorderPointExchange(double **w, double *sharedWbyX, int sizeX, int sizeY, i
 			MPI_Send(w[sizeX - 2], sizeY, MPI_DOUBLE, rightNode, SENDW, vu);
 		}
 	}
-}
+	}
 
 void ReadParameters(int argc, char **argv)
 {
@@ -626,7 +578,7 @@ void CreateGridCommunicator(int numtasks, MPI_Comm &vu, int *dims)
 
 int GetCountElementInRow(int lengthBigGrid, int maxElemets)
 {
-	return (lengthBigGrid ) / maxElemets;
+	return (lengthBigGrid) / maxElemets;
 }
 
 int CalculateSize(int lengthBigGrid, int maxElemets, int gridCoordinate)
