@@ -9,7 +9,7 @@
 #include "MyMacroses.h"
 //#define WRITEFILE
 //#define WRITEFILER
-#define SHOWINFO
+//#define SHOWINFO
 #define RESULTINFILE
 //#define SHOWDELTAGRAPHIC
 #define SHOWCOUNT
@@ -83,7 +83,7 @@ int main(int argc, char **argv)
 	CreateGridCommunicator(numtasks, vu, dims);
 
 	int topNode, downNode, leftNode, rightNode;
-	MPI_Cart_shift(vu, 1, 1, &topNode, &downNode);
+	MPI_Cart_shift(vu, 1, -1, &topNode, &downNode);
 	MPI_Cart_shift(vu, 0, 1, &leftNode, &rightNode);
 
 	/*MPI_Status status;
@@ -112,7 +112,7 @@ int main(int argc, char **argv)
 	int sizeX = CalculateSize(M, dims[0], coord[0]);
 	int sizeY = CalculateSize(N, dims[1], coord[1]);
 
-	cout << "coord = " << dims[0] << ":" << dims[1] << endl;
+	cout << rank << " coord = " << coord[0] << ":" << coord[1] << endl;
 	cout << rank << " elements = (" << sizeX << "; " << sizeY << ")" << endl;
 	//MPI_Finalize();
 	//return 0;
@@ -175,10 +175,10 @@ int main(int argc, char **argv)
 
 	int shiftX = coord[0] * GetCountElementInRow(M, dims[0]);
 	//if (coord[0] == 0)
-		shiftX -= 1;
+		//shiftX -= 1;
 	int shiftY = coord[1] * GetCountElementInRow(N, dims[1]);
 	//if (coord[1] == 0)
-		shiftY -= 1;
+		//shiftY -= 1;
 	cout << rank << " shift: " << shiftX << " " << shiftY << endl;
 	for (int i = 0; i < sizeX; ++i)
 	{
@@ -246,12 +246,12 @@ int main(int argc, char **argv)
 	if (coord[1] == dims[1] - 1)
 		Nfor -= 1;
 	int startI = 1;
-	if (coord[0] == 0)
-		startI = 2;
+	/*if (coord[0] == 0)
+		startI = 2;*/
 
 	int startJ = 1;
-	if (coord[1] == 0)
-		startJ = 2;
+	/*if (coord[1] == 0)
+		startJ = 2;*/
 	//Основной цикл
 	//#pragma omp parallel private(i, j, rA, tau)
 	for (;  k < KMAX; )
@@ -720,7 +720,7 @@ void CreateGridCommunicator(int numtasks, MPI_Comm &vu, int *dims)
 	MPI_Dims_create(numtasks, 2, dims);
 
 	period[0] = false; period[1] = false;
-	reorder = true;
+	reorder = false;
 	MPI_Cart_create(MPI_COMM_WORLD, 2, dims, period, reorder, &vu);
 }
 
@@ -734,7 +734,13 @@ int CalculateSize(int lengthBigGrid, int maxElemets, int gridCoordinate)
 	int size = GetCountElementInRow(lengthBigGrid, maxElemets);
 	if (gridCoordinate == maxElemets - 1)
 		size = (lengthBigGrid + 1) - size * gridCoordinate;
+
 	size += 2;//Для обмена с соседними узлами на сетке
+	if (gridCoordinate == 0)//у первого узла на соседа меньше
+		size -= 1;
+	//не ifelse, так как элемент может быть один по данному измерению
+	if (gridCoordinate == maxElemets - 1)// у последнего узла на соседа меньше
+		size -= 1;
 	return size;
 }
 
