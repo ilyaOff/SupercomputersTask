@@ -516,6 +516,7 @@ void BorderPointExchange(double **w, double *sharedWbyX, int sizeX, int sizeY, i
 			MPI_Recv(w[sizeX - 1], sizeY, MPI_DOUBLE, rightNode, SENDW, vu, &status);
 		}
 
+		if (leftNode >= 0)
 		{
 			//cout << "I am" << coord[0] << ":" << coord[1] << endl;			
 			MPI_Send(w[1], sizeY, MPI_DOUBLE, leftNode, SENDW, vu);
@@ -524,6 +525,7 @@ void BorderPointExchange(double **w, double *sharedWbyX, int sizeX, int sizeY, i
 	}
 	else
 	{
+		if (leftNode >= 0)
 		{
 			MPI_Recv(w[0], sizeY, MPI_DOUBLE, leftNode, SENDW, vu, &status);
 			MPI_Send(w[1], sizeY, MPI_DOUBLE, leftNode, SENDW, vu);
