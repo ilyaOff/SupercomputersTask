@@ -138,7 +138,7 @@ int main(int argc, char **argv)
 	//omp_set_dynamic(1);
 
 	cout << "start" << endl;
-	cout << "MaxThereads = " <<omp_get_max_threads() << endl;
+	cout << "MaxThereads = " << omp_get_max_threads() << endl;
 	double start = MPI_Wtime();
 
 	for (int i = 0; i < sizeX; ++i)
@@ -203,17 +203,17 @@ int main(int argc, char **argv)
 
 	cout << Mfor << Nfor << endl;
 	//Основной цикл
-	#pragma omp parallel private(i, j, rA, tau)
+	//#pragma omp parallel private(i, j, rA, tau)
 	for (; k < KMAX; )
 	{
 		//записать значения массива от соседей
-		#pragma omp single
+		//#pragma omp single
 		{
 			BorderPointExchange(w, sharedWbyX, sharedWbyX2, sizeX, sizeY, coord, rightNode, leftNode, downNode, topNode, vu);
 		}
 
 		//посчитать невязку r
-		#pragma omp for collapse(2) schedule(static)
+		#pragma omp parallel for collapse(2) schedule(static) private(i, j)
 		for (i = startI; i < Mfor; ++i)
 		{
 			for (j = startJ; j < Nfor; ++j)
@@ -222,7 +222,7 @@ int main(int argc, char **argv)
 			}
 		}
 
-		#pragma omp single
+		//#pragma omp single
 		{
 			tauNumerator = 0.0, tauDenominator = 0.0;
 			deltaSqr = 0.0;
@@ -233,13 +233,13 @@ int main(int argc, char **argv)
 		}
 
 
-		#pragma omp single
+		//#pragma omp single
 		{
 			BorderPointExchange(r, sharedWbyX, sharedWbyX2, sizeX, sizeY, coord, rightNode, leftNode, downNode, topNode, vu);
 		}
 
 		//посчитать итерационный параметр
-		#pragma omp for collapse(2) schedule(static) reduction(+:tauNumerator, tauDenominator)
+		#pragma omp parallel for collapse(2) schedule(static) reduction(+:tauNumerator, tauDenominator) private(i, j, rA)
 		for (i = startI; i < Mfor; ++i)
 		{
 			for (j = startJ; j < Nfor; ++j)
@@ -255,7 +255,7 @@ int main(int argc, char **argv)
 			}
 		}
 
-		#pragma omp single
+		//#pragma omp single
 		{
 			//if (rank == 0)
 			//	cout << "before " << tauNumerator / tauDenominator << "split " << tauNumerator << " " << tauDenominator << endl;
@@ -265,15 +265,15 @@ int main(int argc, char **argv)
 			tauNumerator = tau4Recive[0];
 			tauDenominator = tau4Recive[1];
 
-			
+
 			//if (rank == 0)
 			//	cout << "after " << tau << endl;
 		}
-		tau = tauNumerator /( tauDenominator);
+		tau = tauNumerator / (tauDenominator);
 
 		//посчитать w(k+1)
 		//посчитать точность
-		#pragma omp for schedule(static) collapse(2) reduction(+:deltaSqr)
+		#pragma omp parallel for schedule(static) collapse(2) reduction(+:deltaSqr) private(i, j)
 		for (i = startI; i < Mfor; ++i)
 		{
 			for (j = startJ; j < Nfor; ++j)
@@ -285,8 +285,8 @@ int main(int argc, char **argv)
 			}
 		}
 
-		#pragma omp single
-		{		
+		//#pragma omp single
+		{
 			MPI_Allreduce(&deltaSqr, &deltaSqr4Recive, 1, MPI_DOUBLE, MPI_SUM, vu);
 			deltaSqr = deltaSqr4Recive;
 		}
@@ -303,15 +303,15 @@ int main(int argc, char **argv)
 				}
 			}
 
-			#pragma omp single nowait
+			//#pragma omp single nowait
 			{
 				Write2FileWithStep("f/RAA/errorGrid", rank, k, rAGrid, sizeX, sizeY);
 			}
-			#pragma omp single nowait
+			//#pragma omp single nowait
 			{
 				Write2FileWithStep("f/err/errorGrid", rank, k, err, sizeX, sizeY);
 			}
-			#pragma omp single nowait
+			//#pragma omp single nowait
 			{
 				Write2FileWithStep("f/Rerr/errorGrid", rank, k, r, sizeX, sizeY);
 			}
@@ -319,9 +319,9 @@ int main(int argc, char **argv)
 		#endif // SHOWERRORGRAPHIC
 
 		#if defined SHOWCOUNT || defined SHOWDELTAGRAPHIC
-		#pragma omp barrier
+		//#pragma omp barrier
 		#if defined SHOWCOUNT
-		#pragma omp single nowait
+		//#pragma omp single nowait
 		{
 			if (k % TracingPeriod == 0)
 			{
@@ -340,10 +340,10 @@ int main(int argc, char **argv)
 		#endif // SHOWINFO
 
 		#ifdef WRITEFILER
-		#pragma omp barrier
+		//#pragma omp barrier
 		if (k % TracingPeriod == 0)
 		{
-			#pragma omp for schedule(static) collapse(2) reduction(+:norma2R)
+			#pragma omp parallel for schedule(static) collapse(2) reduction(+:norma2R)
 			for (i = 1; i < Mfor; ++i)
 			{
 				for (j = 1; j < Nfor; ++j)
@@ -354,7 +354,7 @@ int main(int argc, char **argv)
 
 			MPI_Reduce(&norma2R, &deltaSqr4Recive, 1, MPI_DOUBLE, MPI_SUM, 0, vu);
 			norma2R = deltaSqr4Recive;
-			#pragma omp single nowait
+			//#pragma omp single nowait
 			{
 				if (rank == 0)
 				{
@@ -368,7 +368,7 @@ int main(int argc, char **argv)
 		#endif// WRITEFILER
 
 		#ifdef SHOWDELTAGRAPHIC
-		#pragma omp single nowait
+		//#pragma omp single nowait
 		{
 			if (rank == 0)
 			{
@@ -378,7 +378,7 @@ int main(int argc, char **argv)
 		#endif // SHOWDELTAGRAPHIC
 		#endif // OR DEFINED
 
-		#pragma omp barrier
+		//#pragma omp barrier
 
 		if (deltaSqr < DELTA * DELTA)
 		{
