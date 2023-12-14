@@ -7,12 +7,13 @@
 #include "Point.h"
 #include "Task2.h"
 #include "MyMacroses.h"
+
 //#define WRITEFILE
 //#define WRITEFILER
-#define SHOWINFO
+//#define SHOWINFO
 #define RESULTINFILE
 //#define SHOWDELTAGRAPHIC
-#define SHOWCOUNT
+//#define SHOWCOUNT
 //#define SHOWERRORGRAPHIC
 
 #define SENDW 10
@@ -58,12 +59,15 @@ int main(int argc, char **argv)
 		cout << "M = " << M << " N = " << N << " Period = " << TracingPeriod << endl;
 	}
 
-	int size[2];
+	int size[3];
 	size[0] = M;
 	size[1] = N;
-	MPI_Bcast(size, 2, MPI_INT, 0, MPI_COMM_WORLD);
+	size[2] = TracingPeriod;
+	MPI_Bcast(size, 3, MPI_INT, 0, MPI_COMM_WORLD);
 	M = size[0];
 	N = size[1];
+	TracingPeriod = size[2];
+
 	if (M <= 0 || N <= 0)
 	{
 		cout << "invalid parametres (M, N)";
@@ -247,9 +251,7 @@ int main(int argc, char **argv)
 			MPI_Allreduce(tau4Send, tau4Recive, 2, MPI_DOUBLE, MPI_SUM, vu);
 			tauNumerator = tau4Recive[0];
 			tauDenominator = tau4Recive[1];
-			/*if (tauDenominator == 0 || isnan(tauDenominator))
-				tau = 0;
-			else*/
+
 			tau = tauNumerator / tauDenominator;
 		}
 
@@ -277,9 +279,9 @@ int main(int argc, char **argv)
 		if (k % TracingPeriod == 0)
 		{
 			//#pragma omp for schedule(static) collapse(2)
-			for (i = 1; i < M; ++i)
+			for (i = 1; i < Mfor; ++i)
 			{
-				for (j = 1; j < N; ++j)
+				for (j = 1; j < Nfor; ++j)
 				{
 					err[i][j] = -tau * r[i][j];
 				}
@@ -310,8 +312,6 @@ int main(int argc, char **argv)
 				cout << k << " node " << rank << ")";
 				cout << " delta^2 = " << deltaSqr;
 				cout << " tau = " << tau;
-				/*cout << " tauNumerator = " << tauNumerator;
-				cout << " tauDenominator = " << tauDenominator;*/
 				cout << endl;
 
 				#ifdef WRITEFILE
@@ -328,24 +328,32 @@ int main(int argc, char **argv)
 		if (k % TracingPeriod == 0)
 		{
 			//#pragma omp for schedule(static) collapse(2) reduction(+:norma2R)
-			for (i = 1; i < M; ++i)
+			for (i = 1; i < Mfor; ++i)
 			{
-				for (j = 1; j < N; ++j)
+				for (j = 1; j < Nfor; ++j)
 				{
 					norma2R += r[i][j] * r[i][j];
 				}
 			}
 
+			MPI_Reduce(&norma2R, &deltaSqr4Recive, 1, MPI_DOUBLE, MPI_SUM, 0, vu);
+			norma2R = deltaSqr4Recive;
 			//#pragma omp single
 			{
-				foutR << norma2R << ";" << endl;
+				if (rank == 0)
+				{
+					cout << "start write norma2R" << endl;
+					foutR << norma2R << ";" << endl;
+					cout << "end write norma2R" << endl;
+				}
 				norma2R = 0;
 			}
-			}
+		}
 		#endif// WRITEFILER
 
 		#ifdef SHOWDELTAGRAPHIC
 		//#pragma omp single nowait
+		if(rank == 0)
 		{
 			deltaLog << deltaSqr << endl;
 		}
@@ -357,7 +365,7 @@ int main(int argc, char **argv)
 		{
 			break;
 		}
-		}
+	}
 
 	//#ifdef SHOWCOUNT
 	cout << "stop k = " << k << endl;
@@ -374,14 +382,17 @@ int main(int argc, char **argv)
 	#ifdef WRITEFILER
 	{
 		norma2R = 0.0;
-		for (i = 1; i < M; ++i)
+		for (i = 1; i < Mfor; ++i)
 		{
-			for (j = 1; j < N; ++j)
+			for (j = 1; j < Nfor; ++j)
 			{
 				norma2R += r[i][j] * r[i][j];
 			}
 		}
-		foutR << norma2R << endl;
+		MPI_Reduce(&norma2R, &deltaSqr4Recive, 1, MPI_DOUBLE, MPI_SUM, 0, vu);
+		norma2R = deltaSqr4Recive;
+		if(rank == 0)
+			foutR << norma2R << endl;
 		foutR.close();
 	}
 	#endif
