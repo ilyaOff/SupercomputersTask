@@ -13,7 +13,7 @@
 //#define SHOWINFO
 #define RESULTINFILE
 //#define SHOWDELTAGRAPHIC
-//#define SHOWCOUNT
+#define SHOWCOUNT
 //#define SHOWERRORGRAPHIC
 
 #define SENDW 10
@@ -111,6 +111,7 @@ int main(int argc, char **argv)
 	double **b = new double *[sizeX];
 	double **F = new double *[sizeX];
 	double *sharedWbyX = new double[sizeX];
+	double *sharedWbyX2 = new double[sizeX];
 
 	for (int i = 0; i < sizeX; ++i)
 	{
@@ -204,7 +205,7 @@ int main(int argc, char **argv)
 	for (; k < KMAX; )
 	{
 		//записать значения массива от соседей
-		BorderPointExchange(w, sharedWbyX, sizeX, sizeY, coord, rightNode, leftNode, downNode, topNode, vu);
+		BorderPointExchange(w, sharedWbyX, sharedWbyX2, sizeX, sizeY, coord, rightNode, leftNode, downNode, topNode, vu);
 		//посчитать невязку r
 		//#pragma omp  for collapse(2) schedule(static)
 		for (i = startI; i < Mfor; ++i)
@@ -227,7 +228,7 @@ int main(int argc, char **argv)
 		//#pragma omp barrier
 
 		//посчитать итерационный параметр
-		BorderPointExchange(r, sharedWbyX, sizeX, sizeY, coord, rightNode, leftNode, downNode, topNode, vu);
+		BorderPointExchange(r, sharedWbyX, sharedWbyX2, sizeX, sizeY, coord, rightNode, leftNode, downNode, topNode, vu);
 		//#pragma omp for collapse(2) schedule(static) reduction(+:tauNumerator, tauDenominator)
 		for (i = startI; i < Mfor; ++i)
 		{
@@ -353,7 +354,7 @@ int main(int argc, char **argv)
 
 		#ifdef SHOWDELTAGRAPHIC
 		//#pragma omp single nowait
-		if(rank == 0)
+		if (rank == 0)
 		{
 			deltaLog << deltaSqr << endl;
 		}
@@ -391,7 +392,7 @@ int main(int argc, char **argv)
 		}
 		MPI_Reduce(&norma2R, &deltaSqr4Recive, 1, MPI_DOUBLE, MPI_SUM, 0, vu);
 		norma2R = deltaSqr4Recive;
-		if(rank == 0)
+		if (rank == 0)
 			foutR << norma2R << endl;
 		foutR.close();
 	}
@@ -441,6 +442,7 @@ int main(int argc, char **argv)
 	delete[] F;
 
 	delete[] sharedWbyX;
+	delete[] sharedWbyX2;
 
 	#ifdef SHOWERRORGRAPHIC
 	delete[] err;
@@ -449,13 +451,13 @@ int main(int argc, char **argv)
 
 	MPI_Finalize();
 	return 0;
-	}
+}
 
-void BorderPointExchange(double **w, double *sharedWbyX, int sizeX, int sizeY, int(&coord)[2], int rightNode, int leftNode, int downNode, int topNode, const MPI_Comm &vu)
+void BorderPointExchange(double **w, double *sharedWbyX, double *sharedWbyX2, int sizeX, int sizeY, int(&coord)[2], int rightNode, int leftNode, int downNode, int topNode, const MPI_Comm &vu)
 {
 	MPI_Status status;
 
-	if (coord[1] % 2 == 0)
+	//if (coord[1] % 2 == 0)
 	{
 		if (downNode >= 0)
 		{
@@ -464,11 +466,13 @@ void BorderPointExchange(double **w, double *sharedWbyX, int sizeX, int sizeY, i
 			{
 				sharedWbyX[i] = w[i][1];
 			}
-			MPI_Send(sharedWbyX, sizeX, MPI_DOUBLE, downNode, SENDW, vu);
-			MPI_Recv(sharedWbyX, sizeX, MPI_DOUBLE, downNode, SENDW, vu, &status);
+			MPI_Sendrecv(sharedWbyX, sizeX, MPI_DOUBLE, downNode, SENDW,
+						 sharedWbyX2, sizeX, MPI_DOUBLE, downNode, SENDW, vu, &status);
+			//MPI_Send(sharedWbyX, sizeX, MPI_DOUBLE, downNode, SENDW, vu);
+			//MPI_Recv(sharedWbyX, sizeX, MPI_DOUBLE, downNode, SENDW, vu, &status);
 			for (int i = 0; i < sizeX; ++i)
 			{
-				w[i][0] = sharedWbyX[i];
+				w[i][0] = sharedWbyX2[i];
 			}
 		}
 
@@ -479,18 +483,22 @@ void BorderPointExchange(double **w, double *sharedWbyX, int sizeX, int sizeY, i
 			{
 				sharedWbyX[i] = w[i][sizeY - 2];
 			}
-			MPI_Send(sharedWbyX, sizeX, MPI_DOUBLE, topNode, SENDW, vu);
-			MPI_Recv(sharedWbyX, sizeX, MPI_DOUBLE, topNode, SENDW, vu, &status);
+			MPI_Sendrecv(sharedWbyX, sizeX, MPI_DOUBLE, topNode, SENDW,
+						 sharedWbyX2, sizeX, MPI_DOUBLE, topNode, SENDW, vu, &status);
+			//MPI_Send(sharedWbyX, sizeX, MPI_DOUBLE, topNode, SENDW, vu);
+			//MPI_Recv(sharedWbyX, sizeX, MPI_DOUBLE, topNode, SENDW, vu, &status);
 			for (int i = 0; i < sizeX; ++i)
 			{
-				w[i][sizeY - 1] = sharedWbyX[i];
+				w[i][sizeY - 1] = sharedWbyX2[i];
 			}
-}
+		}
 	}
-	else
+	/*else
 	{
 		if (topNode >= 0)
 		{
+			MPI_Sendrecv(sharedWbyX, sizeX, MPI_DOUBLE, topNode, SENDW,
+						 sharedWbyX2, sizeX, MPI_DOUBLE, topNode, SENDW, vu, &status);
 			MPI_Recv(sharedWbyX, sizeX, MPI_DOUBLE, topNode, SENDW, vu, &status);
 			for (int i = 0; i < sizeX; ++i)
 			{
@@ -516,25 +524,27 @@ void BorderPointExchange(double **w, double *sharedWbyX, int sizeX, int sizeY, i
 			}
 			MPI_Send(sharedWbyX, sizeX, MPI_DOUBLE, downNode, SENDW, vu);
 		}
-	}
+	}*/
 
-	if (coord[0] % 2 == 0)
+	//if (coord[0] % 2 == 0)
 	{
 		if (rightNode >= 0)
 		{
-			//cout << "I am" << coord[0] << ":" << coord[1] << endl;
-			MPI_Send(w[sizeX - 2], sizeY, MPI_DOUBLE, rightNode, SENDW, vu);
-			MPI_Recv(w[sizeX - 1], sizeY, MPI_DOUBLE, rightNode, SENDW, vu, &status);
+			MPI_Sendrecv(w[sizeX - 2], sizeY, MPI_DOUBLE, rightNode, SENDW,
+						 w[sizeX - 1], sizeY, MPI_DOUBLE, rightNode, SENDW, vu, &status);
+			//MPI_Send(w[sizeX - 2], sizeY, MPI_DOUBLE, rightNode, SENDW, vu);
+			//MPI_Recv(w[sizeX - 1], sizeY, MPI_DOUBLE, rightNode, SENDW, vu, &status);
 		}
 
 		if (leftNode >= 0)
 		{
-			//cout << "I am" << coord[0] << ":" << coord[1] << endl;			
-			MPI_Send(w[1], sizeY, MPI_DOUBLE, leftNode, SENDW, vu);
-			MPI_Recv(w[0], sizeY, MPI_DOUBLE, leftNode, SENDW, vu, &status);
+			MPI_Sendrecv(w[1], sizeY, MPI_DOUBLE, leftNode, SENDW,
+						 w[0], sizeY, MPI_DOUBLE, leftNode, SENDW, vu, &status);
+			//MPI_Send(w[1], sizeY, MPI_DOUBLE, leftNode, SENDW, vu);
+			//MPI_Recv(w[0], sizeY, MPI_DOUBLE, leftNode, SENDW, vu, &status);
 		}
 	}
-	else
+	/*else
 	{
 		if (leftNode >= 0)
 		{
@@ -547,7 +557,7 @@ void BorderPointExchange(double **w, double *sharedWbyX, int sizeX, int sizeY, i
 			MPI_Recv(w[sizeX - 1], sizeY, MPI_DOUBLE, rightNode, SENDW, vu, &status);
 			MPI_Send(w[sizeX - 2], sizeY, MPI_DOUBLE, rightNode, SENDW, vu);
 		}
-	}
+	}*/
 }
 
 void ReadParameters(int argc, char **argv)
